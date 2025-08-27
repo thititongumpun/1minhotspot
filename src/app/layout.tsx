@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     title: "สรุปข่าวร้อนใน 1 นาที",
     description:
       "ติดตามสรุปข่าวร้อนแบบสั้น กระชับ เข้าใจง่าย อัปเดตทุกวันใน 1 นาที",
-    url: "https://example.com", // เปลี่ยนเป็น domain ของคุณ
+    url: "https://1minhotspot.vercel.app", // เปลี่ยนเป็น domain ของคุณ
     siteName: "สรุปข่าวร้อน",
     images: [
       {
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     images: ["https://example.com/og-image.jpg"], // ใช้รูปเดียวกับ OpenGraph
     creator: "@TTongumpun",
   },
-  metadataBase: new URL("https://example.com"), // ใส่ domain ของคุณ
+  metadataBase: new URL("https://1minhotspot.vercel.app"), // ใส่ domain ของคุณ
   robots: {
     index: true,
     follow: true,

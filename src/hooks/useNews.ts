@@ -12,6 +12,9 @@ interface UseNewsReturn {
   refetch: () => void
 }
 
+const CACHE_KEY = 'youtube_news_cache'
+const CACHE_DURATION = 2 * 60 * 60 * 1000 // 2 hours
+
 export function useNews(): UseNewsReturn {
   const [newsData, setNewsData] = useState<NewsItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -22,11 +25,31 @@ export function useNews(): UseNewsReturn {
       setLoading(true)
       setError(null)
 
-      console.log('🔄 Fetching news data...')
+      // Check cache first
+      const cached = localStorage.getItem(CACHE_KEY)
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached)
+        const isValid = Date.now() - timestamp < CACHE_DURATION
+        
+        if (isValid) {
+          console.log('📦 Using cached data')
+          setNewsData(data)
+          setLoading(false)
+          return
+        }
+      }
+
+      console.log('🔄 Fetching fresh data...')
       console.log('📡 Making YouTube API calls...')
 
       const youtubeNewsData = await fetchYouTubeNewsWithStats(process.env.NEXT_PUBLIC_YOUTUBE_APIKEY!);
       console.log(`✅ Received ${youtubeNewsData.length} videos from YouTube API`)
+
+      // Cache the data
+      localStorage.setItem(CACHE_KEY, JSON.stringify({
+        data: youtubeNewsData,
+        timestamp: Date.now()
+      }))
 
       setNewsData(youtubeNewsData)
 
@@ -44,6 +67,7 @@ export function useNews(): UseNewsReturn {
 
   const refetch = () => {
     console.log('🔄 Force refreshing all data...')
+    localStorage.removeItem(CACHE_KEY)
     fetchNews()
   }
 
