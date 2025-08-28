@@ -28,7 +28,6 @@ export const fetchNocodbData = async (apiKey: string): Promise<NewsItem[]> => {
     }
 
     const data = await response.json();
-    console.log(data);
 
     // Transform NocoDB records to NewsItem format
     return data.list?.map((record: any) => ({
@@ -51,49 +50,6 @@ export const fetchNocodbData = async (apiKey: string): Promise<NewsItem[]> => {
   }
 }
 
-// Alternative version if you need to fetch and process hashtags from description
-export const fetchNocodbDataWithHashtags = async (apiKey: string): Promise<NewsItem[]> => {
-  try {
-    const headers = new Headers();
-    headers.append("xc-token", apiKey);
-
-    const requestOptions = {
-      method: "GET",
-      headers: headers,
-      redirect: "follow" as RequestRedirect
-    };
-
-    const response = await fetch(
-      `${API_BASE_URL}/api/v2/tables/${TABLE_ID}/records?sort=-Id&limit=50`,
-      requestOptions
-    );
-
-    if (!response.ok) {
-      throw new Error(`NocoDB API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log(data);
-
-    return data.list?.map((record: any) => ({
-      id: `nocodb-${record.Id}`,
-      title: record.thTitle || record.title || '',
-      videoId: extractVideoId(record.url || ''),
-      thumbnail: '',
-      duration: '0:30', // Default for shorts
-      views: '0', // Add a views field if needed
-      publishedAt: record.pubDate ? new Date(record.pubDate).toISOString().split('T')[0] : '',
-      description: record.thDesc ?
-        (record.thDesc.slice(0, 150) + (record.thDesc.length > 150 ? '...' : '')) :
-        (record.title ? record.title.slice(0, 150) + (record.title.length > 150 ? '...' : '') : ''),
-      tags: parseHashtagsFromJson(record.hashtag || '[]')
-    })) || [];
-
-  } catch (error) {
-    console.error('Error fetching NocoDB data:', error);
-    throw error;
-  }
-}
 
 // Parse hashtags from JSON string format
 const parseHashtagsFromJson = (hashtagJson: string): string[] => {
@@ -137,20 +93,3 @@ const extractVideoId = (url: string): string => {
 
   return '';
 };
-
-// Utility functions
-const formatDuration = (isoDuration: string): string => {
-  if (!isoDuration) return '0:00';
-  const match = isoDuration.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
-  const minutes = parseInt(match?.[1] || '0');
-  const seconds = parseInt(match?.[2] || '0');
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-}
-
-const formatViewCount = (viewCount: string | number): string => {
-  const count = typeof viewCount === 'string' ? parseInt(viewCount) : viewCount;
-  if (isNaN(count)) return '0';
-  if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
-  if (count >= 1000) return `${Math.floor(count / 1000)}K`;
-  return count.toString();
-}

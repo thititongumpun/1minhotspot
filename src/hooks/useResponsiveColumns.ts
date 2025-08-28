@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
 
 export const useResponsiveColumns = () => {
-  const [columnCount, setColumnCount] = useState(3);
+  const [columnCount, setColumnCount] = useState(1); // Start with mobile-first
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+    
     const updateColumnCount = () => {
       const width = window.innerWidth;
       if (width < 768) {
@@ -22,5 +25,6 @@ export const useResponsiveColumns = () => {
     return () => window.removeEventListener("resize", updateColumnCount);
   }, []);
 
-  return columnCount;
+  // Return 1 column until mounted to prevent hydration mismatch
+  return mounted ? columnCount : 1;
 };

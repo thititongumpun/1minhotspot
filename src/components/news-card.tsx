@@ -110,12 +110,6 @@ export const NewsCard: React.FC<NewsCardProps> = ({
                   {new Date(item.publishedAt).toLocaleDateString("th-TH")}
                 </time>
               )}
-              {item.views && (
-                <>
-                  <span>•</span>
-                  <span>{item.views.toLocaleString()} ครั้ง</span>
-                </>
-              )}
             </div>
           </div>
         </CardContent>
