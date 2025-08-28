@@ -2,6 +2,7 @@ import { NewsItem } from '@/types/NewsItem'
 
 // Your API configuration
 const TABLE_ID = 'mxrdn7f2fl7g3yq'
+const SANOOK_TABLE_ID = 'miuuutll9786ebb'
 const API_BASE_URL = 'https://nocodb-proxy.thiti180536842.workers.dev'
 
 // Fetch data from NocoDB
@@ -17,26 +18,29 @@ export const fetchNocodbData = async (apiKey: string): Promise<NewsItem[]> => {
       redirect: "follow" as RequestRedirect
     };
 
-    // Fetch records from NocoDB table with sorting
-    const response = await fetch(
-      `${API_BASE_URL}/api/v2/tables/${TABLE_ID}/records?sort=-Id&limit=50`,
-      requestOptions
-    );
+    // Fetch from both tables sorted by publishedAt
+    const [response1, response2] = await Promise.all([
+      fetch(`${API_BASE_URL}/api/v2/tables/${TABLE_ID}/records?sort=-pubDate,-Id&limit=25`, requestOptions),
+      fetch(`${API_BASE_URL}/api/v2/tables/${SANOOK_TABLE_ID}/records?sort=-pubDate,-Id&limit=25`, requestOptions)
+    ]);
 
-    if (!response.ok) {
-      throw new Error(`NocoDB API error: ${response.status}`);
+    if (!response1.ok || !response2.ok) {
+      throw new Error(`NocoDB API error: ${response1.status} or ${response2.status}`);
     }
 
-    const data = await response.json();
+    const [data1, data2] = await Promise.all([
+      response1.json(),
+      response2.json()
+    ]);
 
-    // Transform NocoDB records to NewsItem format
-    return data.list?.map((record: any) => ({
+    // Transform records from both tables
+    const news1 = data1.list?.map((record: any) => ({
       id: `nocodb-${record.Id}`,
       title: record.thTitle || record.title || '',
-      englishTitle: record.title || '', // English title for URLs
+      englishTitle: record.title || '',
       videoId: extractVideoId(record.url || ''),
       thumbnail: record.imageUrl || '',
-      duration: '0:30', // Default for shorts, or you can add a duration field to your table
+      duration: '0:30',
       publishedAt: record.pubDate ? new Date(record.pubDate).toISOString().split('T')[0] : '',
       description: record.thDesc ?
         (record.thDesc.slice(0, 150) + (record.thDesc.length > 150 ? '...' : '')) :
@@ -44,6 +48,42 @@ export const fetchNocodbData = async (apiKey: string): Promise<NewsItem[]> => {
       fullDescription: record.thDesc || record.title || '',
       tags: parseHashtagsFromJson(record.hashtag || '[]')
     })) || [];
+
+    const news2 = data2.list?.map((record: any) => ({
+      id: `sanook-${record.Id}`,
+      title: record.thTitle || record.title || '',
+      englishTitle: record.title || '',
+      videoId: extractVideoId(record.url || ''),
+      thumbnail: record.imageUrl || '',
+      duration: '0:30',
+      publishedAt: record.pubDate ? new Date(record.pubDate).toISOString().split('T')[0] : '',
+      description: record.thDesc ?
+        (record.thDesc.slice(0, 150) + (record.thDesc.length > 150 ? '...' : '')) :
+        (record.title ? record.title.slice(0, 150) + (record.title.length > 150 ? '...' : '') : ''),
+      fullDescription: record.thDesc || record.title || '',
+      tags: parseHashtagsFromJson(record.hashtag || '[]')
+    })) || [];
+
+    // Mix news from both sources in chronological order
+    const mixedNews: NewsItem[] = [];
+    let i = 0, j = 0;
+    
+    while (i < news1.length || j < news2.length) {
+      const date1 = i < news1.length ? new Date(news1[i].publishedAt || '').getTime() : 0;
+      const date2 = j < news2.length ? new Date(news2[j].publishedAt || '').getTime() : 0;
+      
+      if (i >= news1.length) {
+        mixedNews.push(news2[j++]);
+      } else if (j >= news2.length) {
+        mixedNews.push(news1[i++]);
+      } else if (date1 >= date2) {
+        mixedNews.push(news1[i++]);
+      } else {
+        mixedNews.push(news2[j++]);
+      }
+    }
+
+    return mixedNews;
 
   } catch (error) {
     console.error('Error fetching NocoDB data:', error);

@@ -16,6 +16,18 @@ const nextConfig: NextConfig = {
         port: "",
         pathname: "**",
       },
+      {
+        protocol: "https",
+        hostname: "p3.isanook.com",
+        port: "",
+        pathname: "**",
+      },
+      {
+        protocol: "https",
+        hostname: "s.isanook.com",
+        port: "",
+        pathname: "**",
+      },
     ],
   },
 };

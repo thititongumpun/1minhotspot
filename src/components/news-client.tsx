@@ -25,7 +25,7 @@ interface NewsClientProps {
 export default function NewsClient({ initialNews }: NewsClientProps) {
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [displayCount, setDisplayCount] = useState<number>(10);
+  const [displayCount, setDisplayCount] = useState<number>(12);
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
 
   const columnCount = useResponsiveColumns();
