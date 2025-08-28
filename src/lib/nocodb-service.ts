@@ -2,7 +2,7 @@ import { NewsItem } from '@/types/NewsItem'
 
 // Your API configuration
 const TABLE_ID = 'mxrdn7f2fl7g3yq'
-const API_BASE_URL = 'http://129.150.57.170:8081'
+const API_BASE_URL = 'https://nocodb-proxy.thiti180536842.workers.dev'
 
 // Fetch data from NocoDB
 export const fetchNocodbData = async (apiKey: string): Promise<NewsItem[]> => {
