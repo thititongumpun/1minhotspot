@@ -52,7 +52,7 @@ export const fetchNocodbData = async (apiKey: string): Promise<NewsItem[]> => {
     const news2 = data2.list?.map((record: any) => ({
       id: `sanook-${record.Id}`,
       title: record.thTitle || record.title || '',
-      englishTitle: record.title || '',
+      englishTitle: record.thTitle || record.title || `sanook-${record.Id}`,
       videoId: extractVideoId(record.url || ''),
       thumbnail: record.imageUrl || '',
       duration: '0:30',
