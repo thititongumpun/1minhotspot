@@ -14,7 +14,6 @@ import { NewsItem } from "@/types/NewsItem";
 import { useMainScrollVirtualization } from "@/hooks/useMainScrollVirtualization";
 import { useIntersectionObserver } from "@/hooks/useIntersectionObserver";
 import { useResponsiveColumns } from "@/hooks/useResponsiveColumns";
-// import { NewsCard } from "@/components/news-card";
 
 const NewsCard = dynamic(() => import("@/components/news-card").then(mod => ({ default: mod.NewsCard })), {
   ssr: false,

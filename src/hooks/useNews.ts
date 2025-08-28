@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { NewsItem } from '@/types/NewsItem'
-import { fetchYouTubeNewsWithStats } from '@/lib/youtube-service'
+import { fetchNocodbData } from '@/lib/nocodb-service'
 
 interface UseNewsReturn {
   newsData: NewsItem[]
@@ -42,7 +42,7 @@ export function useNews(): UseNewsReturn {
       console.log('🔄 Fetching fresh data...')
       console.log('📡 Making YouTube API calls...')
 
-      const youtubeNewsData = await fetchYouTubeNewsWithStats(process.env.NEXT_PUBLIC_YOUTUBE_APIKEY!);
+      const youtubeNewsData = await fetchNocodbData(process.env.NEXT_PUBLIC_NOCODB_APIKEY!);
       console.log(`✅ Received ${youtubeNewsData.length} videos from YouTube API`)
 
       // Cache the data

@@ -26,8 +26,8 @@ export const NewsCard: React.FC<NewsCardProps> = ({
         <div className="relative aspect-video rounded-t-lg overflow-hidden bg-slate-100 flex-shrink-0">
           {item.thumbnail ? (
             <Image
-              src={item.thumbnail}
-              alt={item.title}
+              src={item.thumbnail || 'https://example.com/external-image.jpg'}
+              alt={item.title || 'https://example.com/external-image.jpg'}
               fill
               className="object-cover hover:scale-105 transition-transform duration-300"
               sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"

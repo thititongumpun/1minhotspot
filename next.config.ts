@@ -10,6 +10,12 @@ const nextConfig: NextConfig = {
         port: "",
         pathname: "/vi/**",
       },
+      {
+        protocol: "https",
+        hostname: "static.bangkokpost.com",
+        port: "",
+        pathname: "**",
+      },
     ],
   },
 };

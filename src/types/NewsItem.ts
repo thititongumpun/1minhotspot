@@ -11,6 +11,22 @@ export interface NewsItem {
   description: string
 }
 
+export interface VideoItem {
+  Id: number;
+  CreatedAt: Date;
+  UpdatedAt: Date;
+  title: string;
+  link: string;
+  imageUrl: string;
+  used: boolean;
+  updateDate: Date;
+  pubDate: Date;
+  url: string;
+  thTitle: string;
+  thDesc: string;
+  hashtag: string;
+}
+
 export interface VirtualItemData {
   news: NewsItem[];
   onPlayVideo: (videoId: string) => void;
