@@ -1,10 +1,12 @@
 import React from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NewsItem } from "@/types/NewsItem";
+import { createSlug } from "@/lib/url-utils";
 
 interface NewsCardProps {
   item: NewsItem;
@@ -104,6 +106,12 @@ export const NewsCard: React.FC<NewsCardProps> = ({
                 </time>
               )}
             </div>
+            <Link
+              href={`/news/${createSlug(item.englishTitle || item.title || '')}`}
+              className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
+            >
+              ดูเพิ่มเติม
+            </Link>
           </div>
         </CardContent>
       </Card>

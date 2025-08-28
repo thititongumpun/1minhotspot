@@ -1,6 +1,7 @@
 export interface NewsItem {
   id: string
   title: string
+  englishTitle?: string
   category: string
   videoId: string
   thumbnail: string
@@ -9,6 +10,7 @@ export interface NewsItem {
   views: string
   publishedAt: string
   description: string
+  fullDescription?: string
 }
 
 export interface VideoItem {

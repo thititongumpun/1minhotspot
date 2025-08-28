@@ -33,14 +33,15 @@ export const fetchNocodbData = async (apiKey: string): Promise<NewsItem[]> => {
     return data.list?.map((record: any) => ({
       id: `nocodb-${record.Id}`,
       title: record.thTitle || record.title || '',
+      englishTitle: record.title || '', // English title for URLs
       videoId: extractVideoId(record.url || ''),
       thumbnail: record.imageUrl || '',
       duration: '0:30', // Default for shorts, or you can add a duration field to your table
-      views: '0', // Add a views field to your table if needed
       publishedAt: record.pubDate ? new Date(record.pubDate).toISOString().split('T')[0] : '',
       description: record.thDesc ?
         (record.thDesc.slice(0, 150) + (record.thDesc.length > 150 ? '...' : '')) :
         (record.title ? record.title.slice(0, 150) + (record.title.length > 150 ? '...' : '') : ''),
+      fullDescription: record.thDesc || record.title || '',
       tags: parseHashtagsFromJson(record.hashtag || '[]')
     })) || [];
 
