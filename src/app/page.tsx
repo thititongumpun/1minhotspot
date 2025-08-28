@@ -3,6 +3,20 @@ import Link from "next/link";
 import Image from "next/image";
 import { getNewsData } from "@/lib/server-news";
 import NewsClient from "@/components/news-client";
+import type { Metadata } from "next";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { news } = await getNewsData();
+  
+  return {
+    title: "สรุปข่าวร้อนใน 1 นาที | ข่าวล่าสุด " + new Date().toLocaleDateString('th-TH'),
+    description: `ข่าวล่าสุด ${news.length} ข่าว อัปเดตทุกชั่วโมง เสิร์ฟข่าวเด่น ข่าวกีฬา และเรื่องร้อนประจำวันในเวลาไม่เกิน 1 นาที`,
+    openGraph: {
+      title: "สรุปข่าวร้อนใน 1 นาที | ข่าวล่าสุด",
+      description: `ข่าวล่าสุด ${news.length} ข่าว อัปเดตทุกชั่วโมง`,
+    },
+  };
+}
 
 export const revalidate = 3600; // Revalidate every hour
 
@@ -81,6 +95,48 @@ export default async function NewsPage() {
       </header>
 
       <NewsClient initialNews={newsData} />
+      
+      {/* Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "NewsMediaOrganization",
+            "name": "1minhotspot",
+            "url": "https://1minhotspot.vercel.app",
+            "logo": "https://1minhotspot.vercel.app/logobro.png",
+            "description": "เสิร์ฟข่าวเด่น ข่าวกีฬา และเรื่องร้อนประจำวันในเวลาไม่เกิน 1 นาที",
+            "sameAs": [
+              "https://www.youtube.com/@1minhotspot"
+            ],
+            "mainEntity": {
+              "@type": "ItemList",
+              "numberOfItems": newsData.length,
+              "itemListElement": newsData.slice(0, 10).map((item, index) => ({
+                "@type": "NewsArticle",
+                "position": index + 1,
+                "headline": item.title,
+                "description": item.description,
+                "image": item.thumbnail,
+                "datePublished": item.publishedAt,
+                "author": {
+                  "@type": "Organization",
+                  "name": "1minhotspot"
+                },
+                "publisher": {
+                  "@type": "Organization",
+                  "name": "1minhotspot",
+                  "logo": {
+                    "@type": "ImageObject",
+                    "url": "https://1minhotspot.vercel.app/logobro.png"
+                  }
+                }
+              }))
+            }
+          })
+        }}
+      />
 
       {/* Footer */}
       <footer className="bg-white/50 backdrop-blur-sm border-t border-slate-200/50 mt-16">

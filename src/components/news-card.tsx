@@ -1,10 +1,10 @@
-import React from 'react';
-import Image from 'next/image';
-import { TrendingUp } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { NewsItem } from '@/types/NewsItem';
+import React from "react";
+import Image from "next/image";
+import { TrendingUp } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { NewsItem } from "@/types/NewsItem";
 
 interface NewsCardProps {
   item: NewsItem;
@@ -13,11 +13,11 @@ interface NewsCardProps {
   style?: React.CSSProperties;
 }
 
-export const NewsCard: React.FC<NewsCardProps> = ({ 
-  item, 
-  onPlayVideo, 
-  getTagColor, 
-  style 
+export const NewsCard: React.FC<NewsCardProps> = ({
+  item,
+  onPlayVideo,
+  getTagColor,
+  style,
 }) => {
   return (
     <div style={style} className="p-2">
@@ -26,8 +26,8 @@ export const NewsCard: React.FC<NewsCardProps> = ({
         <div className="relative aspect-video rounded-t-lg overflow-hidden bg-slate-100 flex-shrink-0">
           {item.thumbnail ? (
             <Image
-              src={item.thumbnail || 'https://example.com/external-image.jpg'}
-              alt={item.title || 'https://example.com/external-image.jpg'}
+              src={item.thumbnail || "https://example.com/external-image.jpg"}
+              alt={item.title || "https://example.com/external-image.jpg"}
               fill
               className="object-cover hover:scale-105 transition-transform duration-300"
               sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -57,13 +57,6 @@ export const NewsCard: React.FC<NewsCardProps> = ({
                 </svg>
               </div>
             </Button>
-          )}
-
-          {/* Duration */}
-          {item.duration && (
-            <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded">
-              {item.duration}
-            </div>
           )}
         </div>
 

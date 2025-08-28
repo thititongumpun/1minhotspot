@@ -13,44 +13,43 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "สรุปข่าวร้อนใน 1 นาที | ข่าวสั้น กระชับ เข้าใจง่าย",
-  description:
-    "อัปเดตข่าวร้อนล่าสุดภายใน 1 นาที ครบทุกประเด็นสำคัญ ข่าวสั้น กระชับ เข้าใจง่าย เหมาะสำหรับคนที่มีเวลาน้อย",
-  keywords: [
-    "ข่าวร้อน",
-    "ข่าวสั้น",
-    "สรุปข่าว",
-    "ข่าววันนี้",
-    "ข่าวด่วน",
-    "ข่าวล่าสุด",
-  ],
-  authors: [{ name: "ทีมงานสรุปข่าว" }],
+  title: "สรุปข่าวร้อนใน 1 นาที | 1minhotspot",
+  description: "เสิร์ฟข่าวเด่น ข่าวกีฬา และเรื่องร้อนประจำวันในเวลาไม่เกิน 1 นาที! ติดตามทุกประเด็นสำคัญแบบไว รู้ทันโลก ไม่พลาดทุกกระแส เหมาะสำหรับคนไม่มีเวลา แต่อยากรู้ครบ จบไว อัปเดตใหม่ทุกวัน",
+  keywords: ["ข่าว", "ข่าวด่วน", "ข่าวกีฬา", "ข่าวบันเทิง", "สรุปข่าว", "1 นาที", "ข่าวไทย", "ข่าวโลก", "Breaking News"],
+  authors: [{ name: "1minhotspot" }],
+  creator: "1minhotspot",
+  publisher: "1minhotspot",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  metadataBase: new URL("https://1minhotspot.vercel.app"),
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
-    title: "สรุปข่าวร้อนใน 1 นาที",
-    description:
-      "ติดตามสรุปข่าวร้อนแบบสั้น กระชับ เข้าใจง่าย อัปเดตทุกวันใน 1 นาที",
-    url: "https://1minhotspot.vercel.app", // เปลี่ยนเป็น domain ของคุณ
-    siteName: "สรุปข่าวร้อน",
-    images: [
-      {
-        url: "https://example.com/og-image.jpg", // รูปภาพแชร์บน Facebook/Line
-        width: 1200,
-        height: 630,
-        alt: "สรุปข่าวร้อนใน 1 นาที",
-      },
-    ],
+    title: "สรุปข่าวร้อนใน 1 นาที | 1minhotspot",
+    description: "เสิร์ฟข่าวเด่น ข่าวกีฬา และเรื่องร้อนประจำวันในเวลาไม่เกิน 1 นาที! ติดตามทุกประเด็นสำคัญแบบไว รู้ทันโลก ไม่พลาดทุกกระแส",
+    url: "https://1minhotspot.vercel.app",
+    siteName: "1minhotspot",
     locale: "th_TH",
     type: "website",
+    images: [
+      {
+        url: "/logobro.png",
+        width: 1200,
+        height: 630,
+        alt: "1minhotspot - สรุปข่าวร้อนใน 1 นาที",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "สรุปข่าวร้อนใน 1 นาที",
-    description:
-      "ข่าวสั้น กระชับ เข้าใจง่าย อัปเดตทุกวัน เหมาะสำหรับคนที่มีเวลาน้อย",
-    images: ["https://example.com/og-image.jpg"], // ใช้รูปเดียวกับ OpenGraph
-    creator: "@TTongumpun",
+    title: "สรุปข่าวร้อนใน 1 นาที | 1minhotspot",
+    description: "เสิร์ฟข่าวเด่น ข่าวกีฬา และเรื่องร้อนประจำวันในเวลาไม่เกิน 1 นาที!",
+    images: ["/logobro.png"],
   },
-  metadataBase: new URL("https://1minhotspot.vercel.app"), // ใส่ domain ของคุณ
   robots: {
     index: true,
     follow: true,
@@ -62,6 +61,9 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
+  verification: {
+    google: "your-google-verification-code", // Add your Google Search Console verification code
+  },
 };
 
 export default function RootLayout({
@@ -70,7 +72,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="th">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

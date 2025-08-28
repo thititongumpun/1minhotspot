@@ -1,0 +1,21 @@
+{
+  "name": "สรุปข่าวร้อนใน 1 นาที",
+  "short_name": "1minhotspot",
+  "description": "เสิร์ฟข่าวเด่น ข่าวกีฬา และเรื่องร้อนประจำวันในเวลาไม่เกิน 1 นาที!",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e293b",
+  "icons": [
+    {
+      "src": "/logobro.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logobro.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
