@@ -21,6 +21,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
   getTagColor,
   style,
 }) => {
+  
   return (
     <div style={style} className="p-2">
       <Card className="h-full flex flex-col hover:shadow-md transition-all duration-200">
@@ -102,12 +103,14 @@ export const NewsCard: React.FC<NewsCardProps> = ({
             <div className="flex items-center gap-2">
               {item.publishedAt && (
                 <time dateTime={item.publishedAt}>
-                  {new Date(item.publishedAt).toLocaleDateString("th-TH")}
+                  {new Date(item.publishedAt).toLocaleDateString("th-TH")} {new Date(item.publishedAt).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })}
                 </time>
               )}
             </div>
             <Link
-              href={`/news/${createSlug(item.englishTitle || item.title || '')}`}
+              href={`/news/${createSlug(
+                item.englishTitle || item.title || ""
+              )}`}
               className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
             >
               ดูเพิ่มเติม

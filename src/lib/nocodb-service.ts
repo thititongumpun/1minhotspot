@@ -20,8 +20,8 @@ export const fetchNocodbData = async (apiKey: string): Promise<NewsItem[]> => {
 
     // Fetch from both tables sorted by publishedAt
     const [response1, response2] = await Promise.all([
-      fetch(`${API_BASE_URL}/api/v2/tables/${TABLE_ID}/records?sort=-pubDate,-Id&limit=25`, requestOptions),
-      fetch(`${API_BASE_URL}/api/v2/tables/${SANOOK_TABLE_ID}/records?sort=-pubDate,-Id&limit=25`, requestOptions)
+      fetch(`${API_BASE_URL}/api/v2/tables/${TABLE_ID}/records?sort=-pubDate,-Id&where=(used,eq,true)&limit=25`, requestOptions),
+      fetch(`${API_BASE_URL}/api/v2/tables/${SANOOK_TABLE_ID}/records?sort=-pubDate,-Id&where=(used,eq,true)&limit=25`, requestOptions)
     ]);
 
     if (!response1.ok || !response2.ok) {
@@ -41,7 +41,7 @@ export const fetchNocodbData = async (apiKey: string): Promise<NewsItem[]> => {
       videoId: extractVideoId(record.url || ''),
       thumbnail: record.imageUrl || '',
       duration: '0:30',
-      publishedAt: record.pubDate ? new Date(record.pubDate).toISOString().split('T')[0] : '',
+      publishedAt: record.pubDate ? new Date(new Date(record.pubDate).getTime() + (7 * 60 * 60 * 1000)).toISOString() : '',
       description: record.thDesc ?
         (record.thDesc.slice(0, 150) + (record.thDesc.length > 150 ? '...' : '')) :
         (record.title ? record.title.slice(0, 150) + (record.title.length > 150 ? '...' : '') : ''),
@@ -56,7 +56,7 @@ export const fetchNocodbData = async (apiKey: string): Promise<NewsItem[]> => {
       videoId: extractVideoId(record.url || ''),
       thumbnail: record.imageUrl || '',
       duration: '0:30',
-      publishedAt: record.pubDate ? new Date(record.pubDate).toISOString().split('T')[0] : '',
+      publishedAt: record.pubDate ? new Date(new Date(record.pubDate).getTime() + (7 * 60 * 60 * 1000)).toISOString() : '',
       description: record.thDesc ?
         (record.thDesc.slice(0, 150) + (record.thDesc.length > 150 ? '...' : '')) :
         (record.title ? record.title.slice(0, 150) + (record.title.length > 150 ? '...' : '') : ''),
