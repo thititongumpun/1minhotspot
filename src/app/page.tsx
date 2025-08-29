@@ -8,9 +8,11 @@ import type { Metadata } from "next";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { news } = await getNewsData();
-  
+
   return {
-    title: "สรุปข่าวร้อนใน 1 นาที | ข่าวล่าสุด " + new Date().toLocaleDateString('th-TH'),
+    title:
+      "สรุปข่าวร้อนใน 1 นาที | ข่าวล่าสุด " +
+      new Date().toLocaleDateString("th-TH"),
     description: `ข่าวล่าสุด ${news.length} ข่าว อัปเดตทุกชั่วโมง เสิร์ฟข่าวเด่น ข่าวกีฬา และเรื่องร้อนประจำวันในเวลาไม่เกิน 1 นาที`,
     openGraph: {
       title: "สรุปข่าวร้อนใน 1 นาที | ข่าวล่าสุด",
@@ -23,7 +25,7 @@ export const revalidate = 3600; // Revalidate every hour
 
 export default async function NewsPage() {
   const { news: newsData, lastUpdated } = await getNewsData();
-
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
       {/* Header */}
@@ -64,14 +66,17 @@ export default async function NewsPage() {
                 </span>
                 <span>•</span>
                 <time dateTime={lastUpdated}>
-                  อัปเดต {new Date(lastUpdated).toLocaleDateString("th-TH", {
+                  อัปเดต{" "}
+                  {new Date(lastUpdated).toLocaleDateString("th-TH", {
                     year: "numeric",
                     month: "long",
                     day: "numeric",
                     weekday: "long",
-                  })} เวลา {new Date(lastUpdated).toLocaleTimeString("th-TH", {
+                  })}{" "}
+                  เวลา{" "}
+                  {new Date(lastUpdated).toLocaleTimeString("th-TH", {
                     hour: "2-digit",
-                    minute: "2-digit"
+                    minute: "2-digit",
                   })}
                 </time>
               </div>
@@ -81,7 +86,7 @@ export default async function NewsPage() {
       </header>
 
       <NewsClient initialNews={newsData} />
-      
+
       {/* Structured Data */}
       <script
         type="application/ld+json"
@@ -89,38 +94,37 @@ export default async function NewsPage() {
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "NewsMediaOrganization",
-            "name": "1minhotspot",
-            "url": "https://1minhotspot.vercel.app",
-            "logo": "https://1minhotspot.vercel.app/logobro.png",
-            "description": "เสิร์ฟข่าวเด่น ข่าวกีฬา และเรื่องร้อนประจำวันในเวลาไม่เกิน 1 นาที",
-            "sameAs": [
-              "https://www.youtube.com/@1minhotspot"
-            ],
-            "mainEntity": {
+            name: "1minhotspot",
+            url: "https://1minhotspot.vercel.app",
+            logo: "https://1minhotspot.vercel.app/logobro.png",
+            description:
+              "เสิร์ฟข่าวเด่น ข่าวกีฬา และเรื่องร้อนประจำวันในเวลาไม่เกิน 1 นาที",
+            sameAs: ["https://www.youtube.com/@1minhotspot"],
+            mainEntity: {
               "@type": "ItemList",
-              "numberOfItems": newsData.length,
-              "itemListElement": newsData.slice(0, 10).map((item, index) => ({
+              numberOfItems: newsData.length,
+              itemListElement: newsData.slice(0, 10).map((item, index) => ({
                 "@type": "NewsArticle",
-                "position": index + 1,
-                "headline": item.title,
-                "description": item.description,
-                "image": item.thumbnail,
-                "datePublished": item.publishedAt,
-                "author": {
+                position: index + 1,
+                headline: item.title,
+                description: item.description,
+                image: item.thumbnail,
+                datePublished: item.publishedAt,
+                author: {
                   "@type": "Organization",
-                  "name": "1minhotspot"
+                  name: "1minhotspot",
                 },
-                "publisher": {
+                publisher: {
                   "@type": "Organization",
-                  "name": "1minhotspot",
-                  "logo": {
+                  name: "1minhotspot",
+                  logo: {
                     "@type": "ImageObject",
-                    "url": "https://1minhotspot.vercel.app/logobro.png"
-                  }
-                }
-              }))
-            }
-          })
+                    url: "https://1minhotspot.vercel.app/logobro.png",
+                  },
+                },
+              })),
+            },
+          }),
         }}
       />
 
@@ -141,7 +145,7 @@ export default async function NewsPage() {
           </div>
         </div>
       </footer>
-      
+
       <FloatingYouTubeButton />
     </div>
   );
