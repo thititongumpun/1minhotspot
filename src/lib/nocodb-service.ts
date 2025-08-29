@@ -3,6 +3,7 @@ import { NewsItem } from '@/types/NewsItem'
 // Your API configuration
 const TABLE_ID = 'mxrdn7f2fl7g3yq'
 const SANOOK_TABLE_ID = 'miuuutll9786ebb'
+const SPORT_TABLE_ID = 'mr6wevfbnvccuab'
 const API_BASE_URL = 'https://nocodb-proxy.thiti180536842.workers.dev'
 
 // Fetch data from NocoDB
@@ -19,18 +20,20 @@ export const fetchNocodbData = async (apiKey: string): Promise<NewsItem[]> => {
     };
 
     // Fetch from both tables sorted by publishedAt
-    const [response1, response2] = await Promise.all([
+    const [response1, response2, response3] = await Promise.all([
       fetch(`${API_BASE_URL}/api/v2/tables/${TABLE_ID}/records?sort=-pubDate,-Id&where=(used,eq,true)&limit=25`, requestOptions),
-      fetch(`${API_BASE_URL}/api/v2/tables/${SANOOK_TABLE_ID}/records?sort=-pubDate,-Id&where=(used,eq,true)&limit=25`, requestOptions)
+      fetch(`${API_BASE_URL}/api/v2/tables/${SANOOK_TABLE_ID}/records?sort=-pubDate,-Id&where=(used,eq,true)&limit=25`, requestOptions),
+      fetch(`${API_BASE_URL}/api/v2/tables/${SPORT_TABLE_ID}/records?sort=-pubDate,-Id&where=(used,eq,true)&limit=10`, requestOptions),
     ]);
 
-    if (!response1.ok || !response2.ok) {
+    if (!response1.ok || !response2.ok || !response3.ok) {
       throw new Error(`NocoDB API error: ${response1.status} or ${response2.status}`);
     }
 
-    const [data1, data2] = await Promise.all([
+    const [data1, data2, data3] = await Promise.all([
       response1.json(),
-      response2.json()
+      response2.json(),
+      response3.json()
     ]);
 
     // Transform records from both tables
@@ -41,7 +44,7 @@ export const fetchNocodbData = async (apiKey: string): Promise<NewsItem[]> => {
       videoId: extractVideoId(record.url || ''),
       thumbnail: record.imageUrl || '',
       duration: '0:30',
-      publishedAt: record.pubDate ? new Date(new Date(record.pubDate).getTime() + (7 * 60 * 60 * 1000)).toISOString() : '',
+      publishedAt: record.pubDate ? new Date(new Date(record.pubDate).getTime()).toISOString() : '',
       description: record.thDesc ?
         (record.thDesc.slice(0, 150) + (record.thDesc.length > 150 ? '...' : '')) :
         (record.title ? record.title.slice(0, 150) + (record.title.length > 150 ? '...' : '') : ''),
@@ -56,7 +59,7 @@ export const fetchNocodbData = async (apiKey: string): Promise<NewsItem[]> => {
       videoId: extractVideoId(record.url || ''),
       thumbnail: record.imageUrl || '',
       duration: '0:30',
-      publishedAt: record.pubDate ? new Date(new Date(record.pubDate).getTime() + (7 * 60 * 60 * 1000)).toISOString() : '',
+      publishedAt: record.pubDate ? new Date(new Date(record.pubDate).getTime()).toISOString() : '',
       description: record.thDesc ?
         (record.thDesc.slice(0, 150) + (record.thDesc.length > 150 ? '...' : '')) :
         (record.title ? record.title.slice(0, 150) + (record.title.length > 150 ? '...' : '') : ''),
@@ -64,26 +67,27 @@ export const fetchNocodbData = async (apiKey: string): Promise<NewsItem[]> => {
       tags: parseHashtagsFromJson(record.hashtag || '[]')
     })) || [];
 
-    // Mix news from both sources in chronological order
-    const mixedNews: NewsItem[] = [];
-    let i = 0, j = 0;
-    
-    while (i < news1.length || j < news2.length) {
-      const date1 = i < news1.length ? new Date(news1[i].publishedAt || '').getTime() : 0;
-      const date2 = j < news2.length ? new Date(news2[j].publishedAt || '').getTime() : 0;
-      
-      if (i >= news1.length) {
-        mixedNews.push(news2[j++]);
-      } else if (j >= news2.length) {
-        mixedNews.push(news1[i++]);
-      } else if (date1 >= date2) {
-        mixedNews.push(news1[i++]);
-      } else {
-        mixedNews.push(news2[j++]);
-      }
-    }
+    const news3 = data3.list?.map((record: any) => ({
+      id: `sports-${record.Id}`,
+      title: record.thTitle || record.title || '',
+      englishTitle: record.thTitle || record.title || `sports-${record.Id}`,
+      videoId: extractVideoId(record.url || ''),
+      thumbnail: record.imageUrl || '',
+      duration: '0:30',
+      publishedAt: record.pubDate ? new Date(new Date(record.pubDate).getTime()).toISOString() : '',
+      description: record.thDesc ?
+        (record.thDesc.slice(0, 150) + (record.thDesc.length > 150 ? '...' : '')) :
+        (record.title ? record.title.slice(0, 150) + (record.title.length > 150 ? '...' : '') : ''),
+      fullDescription: record.thDesc || record.title || '',
+      tags: parseHashtagsFromJson(record.hashtag || '[]')
+    })) || [];
 
-    return mixedNews;
+    // Mix news from all three sources in chronological order
+    const allNews = [...news1, ...news2, ...news3].sort((a, b) => 
+      new Date(b.publishedAt || '').getTime() - new Date(a.publishedAt || '').getTime()
+    );
+
+    return allNews;
 
   } catch (error) {
     console.error('Error fetching NocoDB data:', error);
