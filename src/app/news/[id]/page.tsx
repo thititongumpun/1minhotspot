@@ -27,7 +27,7 @@ export async function generateMetadata({
   }
 
   return {
-    title: `${newsItem.title} | 1minhotspot`,
+    title: `${newsItem.title}`,
     description:
       newsItem.fullDescription || newsItem.description || newsItem.title,
     openGraph: {
@@ -36,13 +36,26 @@ export async function generateMetadata({
         newsItem.fullDescription || newsItem.description || newsItem.title,
       images: newsItem.thumbnail ? [newsItem.thumbnail] : [],
     },
+    robots: {
+      index: true,
+      follow: true,
+      nocache: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        noimageindex: true,
+        "max-video-preview": -1,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+      },
+    },
   };
 }
 
 export async function generateStaticParams() {
   const { news } = await getNewsData();
   return news.map((item) => ({
-    id: createSlug(item.englishTitle || item.title || ''),
+    id: createSlug(item.englishTitle || item.title || ""),
   }));
 }
 

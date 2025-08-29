@@ -18,6 +18,19 @@ export async function generateMetadata(): Promise<Metadata> {
       title: "สรุปข่าวร้อนใน 1 นาที | ข่าวล่าสุด",
       description: `ข่าวล่าสุด ${news.length} ข่าว อัปเดตทุกชั่วโมง`,
     },
+    robots: {
+      index: true,
+      follow: true,
+      nocache: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        noimageindex: true,
+        "max-video-preview": -1,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+      },
+    },
   };
 }
 
@@ -25,7 +38,7 @@ export const revalidate = 3600; // Revalidate every hour
 
 export default async function NewsPage() {
   const { news: newsData, lastUpdated } = await getNewsData();
-  
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
       {/* Header */}
