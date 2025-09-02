@@ -1,20 +1,33 @@
-'use client';
+"use client";
 
-import { useState, useMemo, useCallback } from 'react';
-import { TrendingUp, X } from 'lucide-react';
-import dynamic from 'next/dynamic';
-import { Badge } from '@/components/ui/badge';
-import { NewsItem } from '@/types/NewsItem';
-import { useMainScrollVirtualization } from '@/hooks/useMainScrollVirtualization';
-import { useIntersectionObserver } from '@/hooks/useIntersectionObserver';
-import { useResponsiveColumns } from '@/hooks/useResponsiveColumns';
+import { useState, useMemo, useCallback } from "react";
+import { TrendingUp, X } from "lucide-react";
+import dynamic from "next/dynamic";
+import { Badge } from "@/components/ui/badge";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
+import { NewsItem } from "@/types/NewsItem";
+import { useMainScrollVirtualization } from "@/hooks/useMainScrollVirtualization";
+import { useIntersectionObserver } from "@/hooks/useIntersectionObserver";
+import { useResponsiveColumns } from "@/hooks/useResponsiveColumns";
 
-const NewsCard = dynamic(() => import('@/components/news-card').then(mod => ({ default: mod.NewsCard })), {
-  ssr: false,
-  loading: () => <div className="p-2 h-96 bg-slate-100 animate-pulse rounded-lg" />
-});
+const NewsCard = dynamic(
+  () =>
+    import("@/components/news-card").then((mod) => ({ default: mod.NewsCard })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="p-2 h-96 bg-slate-100 animate-pulse rounded-lg" />
+    ),
+  }
+);
 
-const VideoModal = dynamic(() => import('@/components/video-modal'), {
+const VideoModal = dynamic(() => import("@/components/video-modal"), {
   ssr: false,
 });
 
@@ -57,6 +70,11 @@ export default function NewsClient({ initialNews }: NewsClientProps) {
     return filteredNews.slice(0, displayCount);
   }, [filteredNews, displayCount]);
 
+  // Head news for carousel (first 6 items)
+  const headNews = useMemo<NewsItem[]>(() => {
+    return filteredNews.slice(0, 6);
+  }, [filteredNews]);
+
   // Virtual scrolling hook
   const { visibleRange, containerRef } = useMainScrollVirtualization(
     displayedNews,
@@ -91,9 +109,11 @@ export default function NewsClient({ initialNews }: NewsClientProps) {
       News: "bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100",
       ข่าว: "bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100",
       AI: "bg-violet-50 text-violet-600 border-violet-200 hover:bg-violet-100",
-      Hollywood: "bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100",
+      Hollywood:
+        "bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100",
       Kpop: "bg-pink-50 text-pink-600 border-pink-200 hover:bg-pink-100",
-      Shorts: "bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100",
+      Shorts:
+        "bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100",
     };
 
     const defaultColors = [
@@ -172,9 +192,7 @@ export default function NewsClient({ initialNews }: NewsClientProps) {
                       tag,
                       index
                     )} border cursor-pointer hover:scale-105 transition-all duration-200 ${
-                      selectedTags.includes(tag)
-                        ? "ring-2 ring-slate-400"
-                        : ""
+                      selectedTags.includes(tag) ? "ring-2 ring-slate-400" : ""
                     }`}
                   >
                     {tag}
@@ -184,10 +202,31 @@ export default function NewsClient({ initialNews }: NewsClientProps) {
             </div>
           )}
 
+          {/* Mobile Carousel for Head News */}
+          <div className="block md:hidden mb-6">
+            <Carousel className="w-full">
+              <CarouselContent className="-ml-2 md:-ml-4">
+                {headNews.map((item) => (
+                  <CarouselItem key={item.id} className="pl-2 md:pl-4 basis-4/5">
+                    <div className="h-96">
+                      <NewsCard
+                        item={item}
+                        onPlayVideo={handlePlayVideo}
+                        getTagColor={getTagColor}
+                      />
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="left-2" />
+              <CarouselNext className="right-2" />
+            </Carousel>
+          </div>
+
           {/* Virtual Grid Container */}
           <div
             ref={containerRef}
-            className="bg-white/30 backdrop-blur-sm rounded-lg border border-slate-200/50"
+            className="bg-white/30 backdrop-blur-sm rounded-lg border border-slate-200/50 hidden md:block"
             style={{
               minHeight: totalHeight,
               position: "relative",
@@ -199,21 +238,38 @@ export default function NewsClient({ initialNews }: NewsClientProps) {
                 style={{
                   gridTemplateColumns: `repeat(${columnCount}, 1fr)`,
                   position: "absolute",
-                  top: Math.floor(visibleRange.start / columnCount) * ROW_HEIGHT,
+                  top:
+                    Math.floor(visibleRange.start / columnCount) * ROW_HEIGHT,
                   width: "100%",
-                  minHeight: Math.ceil(visibleItems.length / columnCount) * ROW_HEIGHT,
+                  minHeight:
+                    Math.ceil(visibleItems.length / columnCount) * ROW_HEIGHT,
                 }}
               >
                 {visibleItems.map((item, index) => (
-                  <NewsCard
-                    key={`${item.id}-${visibleRange.start + index}`}
-                    item={item}
-                    onPlayVideo={handlePlayVideo}
-                    getTagColor={getTagColor}
-                  />
+                  <div key={`${item.id}-${visibleRange.start + index}`} className="h-96">
+                    <NewsCard
+                      item={item}
+                      onPlayVideo={handlePlayVideo}
+                      getTagColor={getTagColor}
+                    />
+                  </div>
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Mobile Grid (Simple grid for remaining items) */}
+          <div className="block md:hidden">
+            <div className="grid grid-cols-1 gap-4">
+              {displayedNews.slice(6).map((item) => (
+                <NewsCard
+                  key={item.id}
+                  item={item}
+                  onPlayVideo={handlePlayVideo}
+                  getTagColor={getTagColor}
+                />
+              ))}
+            </div>
           </div>
 
           {/* Load more trigger */}
@@ -244,7 +300,8 @@ export default function NewsClient({ initialNews }: NewsClientProps) {
                   onClick={loadMore}
                   className="px-6 py-3 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600 transition-colors font-medium"
                 >
-                  โหลดเพิ่มเติม ({filteredNews.length - displayCount} ข่าวที่เหลือ)
+                  โหลดเพิ่มเติม ({filteredNews.length - displayCount}{" "}
+                  ข่าวที่เหลือ)
                 </button>
               )}
             </div>
@@ -256,7 +313,8 @@ export default function NewsClient({ initialNews }: NewsClientProps) {
           <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm px-6 py-3 rounded-full border shadow-sm">
             <TrendingUp className="w-4 h-4 text-slate-600" />
             <span className="text-sm text-slate-600">
-              แสดงข่าว {displayedNews.length} จากทั้งหมด {initialNews.length} ข่าว
+              แสดงข่าว {displayedNews.length} จากทั้งหมด {initialNews.length}{" "}
+              ข่าว
             </span>
           </div>
         </div>

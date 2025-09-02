@@ -1,5 +1,4 @@
 import { TrendingUp } from "lucide-react";
-import Link from "next/link";
 import Image from "next/image";
 import { getNewsData } from "@/lib/server-news";
 import NewsClient from "@/components/news-client";
