@@ -23,7 +23,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({
 }) => {
   
   return (
-    <div style={style} className="p-2">
+    <div style={style} className="p-2 pb-8 h-[500px]">
       <Card className="h-full flex flex-col hover:shadow-md transition-all duration-200">
         {/* Thumbnail */}
         <div className="relative aspect-video rounded-t-lg overflow-hidden bg-slate-100 flex-shrink-0">

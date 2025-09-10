@@ -42,7 +42,7 @@ export default function NewsClient({ initialNews }: NewsClientProps) {
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
 
   const columnCount = useResponsiveColumns();
-  const ROW_HEIGHT = 400;
+  const ROW_HEIGHT = 480;
 
   // Extract all unique tags
   const allTags = useMemo<string[]>(() => {
@@ -208,7 +208,7 @@ export default function NewsClient({ initialNews }: NewsClientProps) {
               <CarouselContent className="-ml-2 md:-ml-4">
                 {headNews.map((item) => (
                   <CarouselItem key={item.id} className="pl-2 md:pl-4 basis-4/5">
-                    <div className="h-96">
+                    <div className="h-[500px]">
                       <NewsCard
                         item={item}
                         onPlayVideo={handlePlayVideo}
@@ -234,7 +234,7 @@ export default function NewsClient({ initialNews }: NewsClientProps) {
           >
             {visibleItems.length > 0 && (
               <div
-                className={`grid gap-4 p-4`}
+                className={`grid gap-4 gap-y-6 p-4`}
                 style={{
                   gridTemplateColumns: `repeat(${columnCount}, 1fr)`,
                   position: "absolute",
