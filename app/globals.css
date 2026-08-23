@@ -1,26 +1,239 @@
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R5 V4 */
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-ink:      oklch(0.155 0.014 264); /* page base */
+  --color-surface:  oklch(0.205 0.016 264); /* cards */
+  --color-hairline: oklch(0.325 0.018 264);
+  --color-fg:       oklch(0.972 0.004 264);
+  --color-muted:    oklch(0.715 0.014 264);
+  --color-hot:      oklch(0.745 0.185 62);  /* signal amber — the "hotspot" */
+
+  /* Latin faces lead; the Thai face is stacked behind every one of them so
+     Thai copy never falls back to a system default — IBM Plex Mono in
+     particular ships no Thai glyphs. */
+  --font-display: var(--font-anuphan), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-plex-thai), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), var(--font-plex-thai), ui-monospace,
+    monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@layer base {
+  /* clip, never hidden: `hidden` on <html> kills position:sticky */
+  html,
+  body {
+    overflow-x: clip;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  html {
+    background-color: var(--color-ink);
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-ink);
+    color: var(--color-fg);
+    font-family: var(--font-body);
+    font-weight: 400;
+    /* Thai needs more leading than Latin: ascenders + tone marks stack. */
+    line-height: 1.75;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-style: normal; /* headings are ALWAYS roman */
+    line-height: 1.25;
+    letter-spacing: -0.005em;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-hot);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: var(--color-hot);
+    color: var(--color-ink);
+  }
+
+  /* One radius for the whole site. Pills opt out explicitly. */
+  img,
+  video,
+  iframe {
+    border-radius: 2px;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  /* The one container: 1240px, 20px gutters, 32px from 1024px up. */
+  .container-hot {
+    width: 100%;
+    max-width: 1240px;
+    margin-inline: auto;
+    padding-inline: 20px;
+  }
+
+  @media (min-width: 1024px) {
+    .container-hot {
+      padding-inline: 32px;
+    }
+  }
+
+  /* Horizontal hairline — the only divider on the site. Shadows are banned. */
+  .rule {
+    border-top: 1px solid var(--color-hairline);
+  }
+
+  /* Vertical hairline for section heads and pulled-in blocks. */
+  .rule-left {
+    border-left: 1px solid var(--color-hairline);
+    padding-inline-start: 12px;
+  }
+
+  /* Section label above a display heading: mono, tracked out, amber, small. */
+  .kicker {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-hot);
+  }
+
+  /* The signature 2px duration rail. Fill comes from --fill:
+     style={{ "--fill": "78%" }} — min(durationSec/60, 1) * 100%. */
+  .hot-rail {
+    --fill: 0%;
+    position: relative;
+    display: block;
+    height: 2px;
+    width: 100%;
+    background-color: var(--color-hairline);
+  }
+
+  .hot-rail::after {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    width: var(--fill);
+    background-color: var(--color-hot);
+  }
+
+  /* Mono numerals for 0:47 — tabular so columns of timecodes line up. */
+  .timecode {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+    color: var(--color-muted);
+  }
+
+  /* Long Thai/English headlines: break anywhere rather than blow out a grid. */
+  .headline-wrap {
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+
+  /* Skip-to-content: off-canvas until focused. */
+  .skip-link {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 100;
+    transform: translateY(-120%);
+    background-color: var(--color-hot);
+    color: var(--color-ink);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    padding: 0.625rem 1rem;
+  }
+
+  .skip-link:focus-visible {
+    transform: translateY(0);
+  }
+
+  /* Loading placeholder: one hairline sweep across the surface, nothing more.
+     Compose it with a size — a utility height for a text line, or
+     .embed-skeleton for the video box. */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    border-radius: 2px;
+    background-color: var(--color-surface);
+  }
+
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+      100deg,
+      transparent 25%,
+      color-mix(in oklch, var(--color-hairline) 65%, transparent) 50%,
+      transparent 75%
+    );
+    animation: embed-sweep 1.6s linear infinite;
+  }
+
+  /* The video box is the largest thing on an article page, and third-party
+     iframes take seconds to paint — an empty hole there reads as broken. */
+  .embed-skeleton {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+  }
+
+  /* The play mark: an amber triangle inside a hairline square — the same two
+     shapes the rest of the site is built from. */
+  .embed-skeleton-play {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    border: 1px solid var(--color-hairline);
+    border-radius: 2px;
+  }
+
+  .embed-skeleton-play::before {
+    content: "";
+    border-block: 9px solid transparent;
+    border-inline-start: 15px solid var(--color-hot);
+    margin-inline-start: 4px; /* optical centring: a triangle sits left-heavy */
+  }
+
+  @keyframes embed-sweep {
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  /* Motion here is decoration, not information: the label already says it. */
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton::after {
+      animation: none;
+    }
+  }
 }

@@ -1,0 +1,190 @@
+import { getDb, type Sql } from "./db";
+import type { CategorySlug, Clip } from "./types";
+
+/** What n8n POSTs after it publishes a reel. Keyed by the Facebook video id. */
+export type ScriptInput = {
+  videoId: string;
+  scriptTh?: string | null;
+  rewrittenTitle?: string | null;
+  sourceUrl?: string | null;
+  sourcePublisher?: string | null;
+};
+
+const DEFAULT_LIMIT = 500;
+
+/** timestamptz comes back as a Date from the driver; be tolerant of a string. */
+const iso = (v: unknown): string =>
+  v instanceof Date ? v.toISOString() : new Date(String(v)).toISOString();
+
+/**
+ * DB row → the existing `Clip` type. No parallel type: whatever comes out of
+ * here is what pages already know how to render.
+ *
+ * `sourceArticle` is deliberately left unset. We store the source URL and
+ * publisher, but `SourceArticle.excerpt` is required and we have no excerpt
+ * column — synthesising one would be fabricating quoted material. lib/clips.ts
+ * already resolves the real excerpt lazily on the article path.
+ */
+const toClip = (r: Record<string, unknown>): Clip => ({
+  id: String(r.id),
+  slug: String(r.slug),
+  source: r.source as Clip["source"],
+  // The rewritten headline wins when n8n produced one; the slug stays derived
+  // from the original title so the URL never moves.
+  title: (r.rewritten_title as string) || String(r.title),
+  summary: (r.summary as string) ?? "",
+  // The rewritten narration IS the article body when present. When it is not,
+  // fall through to whatever the provider description yielded — possibly "",
+  // which the site's honest-placeholder logic already handles.
+  body: (r.script_th as string) || (r.body as string) || "",
+  // Kept beside the coalesce above, so the two can never disagree.
+  hasScript: Boolean(r.script_th),
+  category: r.category as CategorySlug,
+  publishedAt: iso(r.published_at),
+  updatedAt: iso(r.updated_at),
+  durationSec: Number(r.duration_sec),
+  thumbnail: {
+    url: String(r.thumbnail_url),
+    width: Number(r.thumbnail_width),
+    height: Number(r.thumbnail_height),
+  },
+  embedUrl: String(r.embed_url),
+  permalink: String(r.permalink),
+  tags: Array.isArray(r.tags) ? (r.tags as string[]) : [],
+});
+
+/**
+ * Never-throw wrapper, matching the discipline in lib/clips.ts: with no
+ * DATABASE_URL, or on any query failure, log and return the fallback. The site
+ * must build and serve from the live Facebook feed with no database at all.
+ */
+async function run<T>(label: string, fallback: T, fn: (sql: Sql) => Promise<T>): Promise<T> {
+  const sql = getDb();
+  if (!sql) {
+    console.warn(`[store] ${label}: DATABASE_URL unset — skipping.`);
+    return fallback;
+  }
+  try {
+    return await fn(sql);
+  } catch (err) {
+    console.warn(`[store] ${label} failed:`, (err as Error).message);
+    return fallback;
+  }
+}
+
+/**
+ * Idempotent on `slug`: re-archiving a clip the live feed still shows must not
+ * duplicate a row. `published_at` is never overwritten — the first publish time
+ * is the truth. The Thai rewrite lives in clip_scripts and is untouched here.
+ */
+export async function upsertClip(clip: Clip): Promise<boolean> {
+  return run(`upsertClip(${clip.slug})`, false, async (sql) => {
+    await sql`
+      insert into clips (
+        slug, id, source, title, summary, body, category,
+        published_at, updated_at, duration_sec,
+        thumbnail_url, thumbnail_width, thumbnail_height,
+        embed_url, permalink, tags
+      ) values (
+        ${clip.slug}, ${clip.id}, ${clip.source}, ${clip.title}, ${clip.summary},
+        ${clip.body}, ${clip.category},
+        ${clip.publishedAt}, ${clip.updatedAt}, ${clip.durationSec},
+        ${clip.thumbnail.url}, ${clip.thumbnail.width}, ${clip.thumbnail.height},
+        ${clip.embedUrl}, ${clip.permalink}, ${clip.tags}::text[]
+      )
+      on conflict (slug) do update set
+        id               = excluded.id,
+        source           = excluded.source,
+        title            = excluded.title,
+        summary          = excluded.summary,
+        body             = excluded.body,
+        category         = excluded.category,
+        -- published_at intentionally absent: the first publish time is the truth.
+        updated_at       = excluded.updated_at,
+        duration_sec     = excluded.duration_sec,
+        thumbnail_url    = excluded.thumbnail_url,
+        thumbnail_width  = excluded.thumbnail_width,
+        thumbnail_height = excluded.thumbnail_height,
+        embed_url        = excluded.embed_url,
+        permalink        = excluded.permalink,
+        tags             = excluded.tags
+    `;
+    return true;
+  });
+}
+
+/**
+ * Store the Thai rewrite for one reel. Called by POST /api/ingest.
+ *
+ * Upsert, not insert: n8n retries on any non-2xx, so the same payload can
+ * arrive twice. COALESCE on each field means a later call that omits a value
+ * keeps the one already stored — a partial retry never erases a good rewrite.
+ * Returns false (never throws) so the route can answer 5xx and let n8n retry.
+ */
+export async function upsertScript(input: ScriptInput): Promise<boolean> {
+  return run(`upsertScript(${input.videoId})`, false, async (sql) => {
+    await sql`
+      insert into clip_scripts (video_id, script_th, rewritten_title, source_url, source_publisher)
+      values (
+        ${input.videoId}, ${input.scriptTh ?? null}, ${input.rewrittenTitle ?? null},
+        ${input.sourceUrl ?? null}, ${input.sourcePublisher ?? null}
+      )
+      on conflict (video_id) do update set
+        script_th        = coalesce(excluded.script_th, clip_scripts.script_th),
+        rewritten_title  = coalesce(excluded.rewritten_title, clip_scripts.rewritten_title),
+        source_url       = coalesce(excluded.source_url, clip_scripts.source_url),
+        source_publisher = coalesce(excluded.source_publisher, clip_scripts.source_publisher),
+        updated_at       = now()
+    `;
+    return true;
+  });
+}
+
+export async function getStoredClips(limit = DEFAULT_LIMIT): Promise<Clip[]> {
+  return run("getStoredClips", [], async (sql) => {
+    const rows = await sql`
+      select * from clips_full order by published_at desc limit ${Math.max(0, limit)}
+    `;
+    return rows.map(toClip);
+  });
+}
+
+export async function getStoredClipBySlug(slug: string): Promise<Clip | null> {
+  return run(`getStoredClipBySlug(${slug})`, null, async (sql) => {
+    const rows = await sql`select * from clips_full where slug = ${slug} limit 1`;
+    return rows.length > 0 ? toClip(rows[0]) : null;
+  });
+}
+
+export async function getStoredClipsByCategory(
+  category: CategorySlug,
+  limit = DEFAULT_LIMIT,
+): Promise<Clip[]> {
+  return run(`getStoredClipsByCategory(${category})`, [], async (sql) => {
+    const rows = await sql`
+      select * from clips_full where category = ${category}
+      order by published_at desc limit ${Math.max(0, limit)}
+    `;
+    return rows.map(toClip);
+  });
+}
+
+/**
+ * The source-article URL n8n sent for one reel, or null.
+ *
+ * Fallback for lib/providers/source-article.ts, whose primary path reads the
+ * Page's own "อ่านเพิ่มเติม" comment off the Graph API. That comment can be
+ * missing, edited, or simply out of the 50 the comments edge returns — but n8n
+ * knew the URL at publish time and already stored it here, so there is no
+ * reason to lose attribution. Returns the raw string; the caller sanitises it
+ * the same way it sanitises a URL scraped from a comment.
+ */
+export async function getStoredSourceUrl(videoId: string): Promise<string | null> {
+  return run(`getStoredSourceUrl(${videoId})`, null, async (sql) => {
+    const rows = await sql`
+      select source_url from clip_scripts where video_id = ${videoId} limit 1
+    `;
+    const url = rows[0]?.source_url;
+    return typeof url === "string" && url.length > 0 ? url : null;
+  });
+}
