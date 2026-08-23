@@ -146,6 +146,11 @@ export function videoObjectJsonLd(clip: Clip) {
     duration: isoDuration(clip.durationSec),
     embedUrl: clip.embedUrl,
     inLanguage: LANG,
+    // The body IS the script the TTS speaks in the reel, so page and video
+    // saying the same thing is a transcript relationship, not an unexplained
+    // duplicate. Gated on hasScript: a publisher excerpt or the placeholder is
+    // not a transcript and must never be labelled one.
+    ...(clip.hasScript ? { transcript: clip.body } : {}),
     // contentUrl only when the source hands us a direct media file. Facebook and
     // YouTube give a watch page, not a file, so the field is omitted rather than faked.
   };

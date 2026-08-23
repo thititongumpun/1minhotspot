@@ -3,6 +3,11 @@ import { getClips } from "@/lib/clips";
 import { absoluteUrl } from "@/lib/seo";
 import { CATEGORIES } from "@/lib/types";
 
+// sitemap.ts is a Route Handler, cached indefinitely by default — without this
+// the file is frozen at build time and every clip published after the last
+// deploy is invisible to Google. Matches the 3600 every page already exports.
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const clips = (await getClips()).filter(
     // Sample clips are fabricated. Keep them locally so the site is browsable,

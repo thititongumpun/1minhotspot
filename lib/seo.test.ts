@@ -99,6 +99,12 @@ function main() {
   assert.equal(clipDescription(rewritten), "ย่อหน้าแรกจากสคริปต์");
   assert.equal(clipDescription({ ...rewritten, hasScript: false }), source.excerpt);
   console.log("ok  clipDescription: rewrite outranks excerpt, excerpt still wins without one");
+
+  // transcript is a claim about the video's spoken audio. Only the n8n rewrite
+  // is that script; an excerpt or the placeholder is someone else's text.
+  assert.equal(videoObjectJsonLd(rewritten).transcript, rewritten.body);
+  assert.ok(!("transcript" in videoObjectJsonLd({ ...rewritten, hasScript: false })));
+  console.log("ok  VideoObject: transcript only when the body is the spoken script");
 }
 
 main();
