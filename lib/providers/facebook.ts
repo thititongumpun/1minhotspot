@@ -19,11 +19,21 @@ const FIELDS = [
   "length",
   "picture",
   "thumbnails{uri,width,height}",
+  "format",
 ].join(",");
 
 const MAX_DURATION_SEC = 90;
 
+// `thumbnails` returns ~11 *different frames*, all at the reel's native
+// 1080x1920 — there is no smaller size in there. `format` returns the one
+// preferred frame at 130/480/720/native instead. With Image Optimization off
+// the native still ships ~160 KB into a 16:9 slot that crops away most of it;
+// the 720 variant is ~62 KB of the same rendered pixels. 720 rather than 480
+// because the lead runs to 60vw and `object-cover` uses the full width.
+const TARGET_THUMB_WIDTH = 720;
+
 type GraphThumb = { uri?: string; width?: number; height?: number };
+type GraphFormat = { filter?: string; picture?: string; width?: number; height?: number };
 type GraphVideo = {
   id: string;
   title?: string;
@@ -34,6 +44,7 @@ type GraphVideo = {
   length?: number;
   picture?: string;
   thumbnails?: { data?: GraphThumb[] };
+  format?: GraphFormat[];
 };
 type GraphResponse = { data?: GraphVideo[]; error?: { message?: string; type?: string; code?: number } };
 
@@ -50,6 +61,18 @@ export function toIso(fbTime: string | undefined, fallback: string): string {
   if (!fbTime) return fallback;
   const d = new Date(fbTime);
   return Number.isNaN(d.getTime()) ? fallback : d.toISOString();
+}
+
+/** Smallest `format` variant still wide enough to render, or null when Graph
+ *  sent no usable one — callers fall through to `thumbnails`/`picture`. */
+export function pickFormat(
+  formats: GraphFormat[] | undefined,
+): { url: string; width: number; height: number } | null {
+  const usable = (formats ?? [])
+    .filter((f): f is Required<GraphFormat> => Boolean(f.picture && f.width && f.height))
+    .sort((a, b) => a.width - b.width);
+  const pick = usable.find((f) => f.width >= TARGET_THUMB_WIDTH) ?? usable.at(-1);
+  return pick ? { url: pick.picture, width: pick.width, height: pick.height } : null;
 }
 
 export async function fetchFacebookClips(): Promise<Clip[]> {
@@ -76,11 +99,13 @@ export async function fetchFacebookClips(): Promise<Clip[]> {
         .filter((t): t is Required<GraphThumb> => Boolean(t.uri && t.width && t.height))
         .sort((a, b) => b.width - a.width)[0];
       // Graph gives no dimensions for `picture`; 16:9 is the reel still it serves.
-      const thumbnail = thumb
-        ? { url: thumb.uri, width: thumb.width, height: thumb.height }
-        : v.picture
-          ? { url: v.picture, width: 1280, height: 720 }
-          : null;
+      const thumbnail =
+        pickFormat(v.format) ??
+        (thumb
+          ? { url: thumb.uri, width: thumb.width, height: thumb.height }
+          : v.picture
+            ? { url: v.picture, width: 1280, height: 720 }
+            : null);
       if (!thumbnail) return null;
       const publishedAt = toIso(v.created_time, new Date(0).toISOString());
       return buildClip({

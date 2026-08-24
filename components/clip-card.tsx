@@ -16,7 +16,7 @@ export function ClipCard({ clip, eager }: { clip: Clip; eager?: boolean }) {
         loading={eager ? "eager" : "lazy"}
         fetchPriority={eager ? "high" : undefined}
         sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
-        className="aspect-video w-full object-cover"
+        className="aspect-video w-full bg-surface object-cover"
       />
       <span
         aria-hidden

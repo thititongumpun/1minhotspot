@@ -27,7 +27,7 @@ export function LeadStory({
         loading="eager"
         fetchPriority="high"
         sizes="(min-width: 1024px) 60vw, 100vw"
-        className="aspect-video w-full object-cover"
+        className="aspect-video w-full bg-surface object-cover"
       />
       <div
         aria-hidden
