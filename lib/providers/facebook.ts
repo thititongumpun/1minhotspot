@@ -9,6 +9,9 @@ import { buildClip } from "../normalize";
 // permission-sensitive, nothing here reads it, and if Graph rejects it for
 // the token's scopes the *entire* request throws, silently dropping the
 // whole site to sample data. Pure downside for a field we never use.
+// `views` (not `post_views`, which reads 0/near-0 — a different metric) is the
+// reel play count Graph actually tracks on this edge, confirmed live: v26.0
+// GET /{page-id}/videos?fields=...,views returns e.g. {"views":89}.
 const FIELDS = [
   "id",
   "title",
@@ -20,7 +23,16 @@ const FIELDS = [
   "picture",
   "thumbnails{uri,width,height}",
   "format",
+  "views",
 ].join(",");
+
+/** The retry field list, if Graph ever rejects `views` (see fetchFacebookClips).
+ *  Split/filter rather than a string replace so it stays correct wherever
+ *  `views` sits in FIELDS — including first, where there is no leading comma.
+ *  Exported for the self-check in facebook.test.ts. */
+export const FIELDS_WITHOUT_VIEWS = FIELDS.split(",")
+  .filter((f) => f !== "views")
+  .join(",");
 
 const MAX_DURATION_SEC = 90;
 
@@ -45,6 +57,7 @@ type GraphVideo = {
   picture?: string;
   thumbnails?: { data?: GraphThumb[] };
   format?: GraphFormat[];
+  views?: number;
 };
 type GraphResponse = { data?: GraphVideo[]; error?: { message?: string; type?: string; code?: number } };
 
@@ -81,14 +94,30 @@ export async function fetchFacebookClips(): Promise<Clip[]> {
   const version = process.env.FB_API_VERSION || "v26.0";
   if (!pageId || !token) return [];
 
-  const url =
-    `https://graph.facebook.com/${version}/${encodeURIComponent(pageId)}/videos` +
-    `?fields=${FIELDS}&limit=50&access_token=${encodeURIComponent(token)}`;
+  const fetchGraph = async (fields: string): Promise<GraphResponse> => {
+    const url =
+      `https://graph.facebook.com/${version}/${encodeURIComponent(pageId)}/videos` +
+      `?fields=${fields}&limit=50&access_token=${encodeURIComponent(token)}`;
+    const res = await fetch(url, { next: { revalidate: 3600 } });
+    const json = (await res.json().catch(() => ({}))) as GraphResponse;
+    if (!res.ok || json.error) {
+      throw new Error(`Facebook Graph ${res.status}: ${json.error?.message ?? res.statusText}`);
+    }
+    return json;
+  };
 
-  const res = await fetch(url, { next: { revalidate: 3600 } });
-  const json = (await res.json().catch(() => ({}))) as GraphResponse;
-  if (!res.ok || json.error) {
-    throw new Error(`Facebook Graph ${res.status}: ${json.error?.message ?? res.statusText}`);
+  // Graph fails the WHOLE request on one unrecognised/unpermitted field, and
+  // the caller's catch turns that into sample data — fabricated stories on a
+  // live news site. `views` is confirmed on v26.0 with the dev token, but not
+  // on the production token, a FB_API_VERSION bump, or the day Meta drops the
+  // field. Retry once without it: a rejection then costs the ranking section,
+  // not the site. buildClip already treats `views: undefined` as "no count".
+  let json: GraphResponse;
+  try {
+    json = await fetchGraph(FIELDS);
+  } catch (err) {
+    console.error("[facebook] retrying without `views`:", (err as Error).message);
+    json = await fetchGraph(FIELDS_WITHOUT_VIEWS);
   }
 
   return (json.data ?? [])
@@ -119,6 +148,7 @@ export async function fetchFacebookClips(): Promise<Clip[]> {
         thumbnail,
         embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(permalink)}&show_text=false`,
         permalink,
+        views: typeof v.views === "number" ? v.views : undefined,
       });
     })
     // No usable thumbnail (neither `thumbnails` nor `picture`) — drop the

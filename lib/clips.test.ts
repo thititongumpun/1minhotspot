@@ -1,6 +1,12 @@
 // Self-check, no framework: `rtk pnpm exec tsx lib/clips.test.ts`. Exits 0 when green.
 import assert from "node:assert/strict";
-import { getClips } from "./clips";
+// Pinned before any Bangkok-boundary math runs below: bangkokYearMonth (in
+// clips.ts) always passes an explicit timeZone, so this should be a no-op —
+// pinning proves that, the same way components/format.test.ts pins TZ to
+// keep formatDate's own timeZone option honest.
+process.env.TZ = "UTC";
+import { getClips, getMostViewedThisMonth, pickMostViewedThisMonth } from "./clips";
+import type { Clip } from "./types";
 import { toSlug } from "./slug";
 import { PLACEHOLDER, buildClip, deriveArticle, extractHashtags, pickCategory, truncate } from "./normalize";
 import { toIso } from "./providers/facebook";
@@ -162,7 +168,86 @@ async function main() {
   assert.equal(toIso("not-a-date", "fallback"), "fallback", "an unparseable timestamp must use the fallback, not NaN");
   console.log("ok  toIso: Facebook's +0000 basic offset -> valid extended ISO-8601, same instant, safe fallback");
 
+  await mostViewedChecks();
   await sourceArticleChecks();
+}
+
+/**
+ * getMostViewedThisMonth's window+sort logic, tested through the pure
+ * pickMostViewedThisMonth split-out (see clips.ts) so it doesn't depend on
+ * getClips()'s live/sample provider selection.
+ */
+async function mostViewedChecks() {
+  const base: Omit<Clip, "id" | "publishedAt" | "views"> = {
+    slug: "s",
+    source: "facebook",
+    title: "t",
+    summary: "s",
+    body: "b",
+    category: "viral",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    durationSec: 30,
+    thumbnail: { url: "https://example.com/t.jpg", width: 720, height: 1280 },
+    embedUrl: "https://example.com/embed",
+    permalink: "https://example.com/p",
+    tags: [],
+  };
+  const clip = (id: string, publishedAt: string, views: number | undefined): Clip => ({
+    ...base,
+    id,
+    slug: id,
+    publishedAt,
+    views,
+  });
+
+  // Bangkok is UTC+7, so its month rolls over 7 hours before UTC's does.
+  // now = 2026-03-01T02:00:00Z is already 2026-03-01 09:00 in Bangkok, so
+  // "this month" is March in Bangkok. Bangkok's month start as a UTC instant
+  // is 2026-02-28T17:00:00Z.
+  const now = new Date("2026-03-01T02:00:00Z");
+
+  // Published 2026-02-28T18:00:00Z: February in UTC, but 2026-03-01T01:00
+  // +07:00 in Bangkok — i.e. last month in UTC, THIS month in Bangkok. A
+  // naive UTC-month boundary would wrongly exclude it.
+  const straddler = clip("straddler", "2026-02-28T18:00:00.000Z", 10);
+  // Clearly last month on both sides — must never appear.
+  const lastMonth = clip("last-month", "2026-01-15T10:00:00.000Z", 999);
+  // Clearly this month, higher views — must sort first.
+  const topThisMonth = clip("top", "2026-03-05T10:00:00.000Z", 500);
+  // In-window but no real view count — must be excluded, not treated as 0.
+  const noViews = clip("no-views", "2026-03-02T00:00:00.000Z", undefined);
+  const zeroViews = clip("zero-views", "2026-03-02T00:00:00.000Z", 0);
+  // In-window, mid views, published earlier than `topThisMonth` — used to
+  // prove the publishedAt tie-break only kicks in on an actual views tie.
+  const midThisMonth = clip("mid", "2026-03-01T03:00:00.000Z", 50);
+
+  const picked = pickMostViewedThisMonth(
+    [lastMonth, topThisMonth, noViews, zeroViews, midThisMonth, straddler],
+    5,
+    now,
+  );
+  assert.deepEqual(
+    picked.map((c) => c.id),
+    ["top", "mid", "straddler"],
+    "Bangkok month window + views-descending order",
+  );
+  console.log("ok  pickMostViewedThisMonth: UTC/Bangkok month-boundary straddle lands correctly, excludes 0/undefined views, sorts by views desc");
+
+  // Views-tie: publishedAt desc breaks it, deterministically.
+  const tieOlder = clip("tie-older", "2026-03-01T00:00:01.000Z", 20);
+  const tieNewer = clip("tie-newer", "2026-03-10T00:00:00.000Z", 20);
+  const tied = pickMostViewedThisMonth([tieOlder, tieNewer], 5, now);
+  assert.deepEqual(tied.map((c) => c.id), ["tie-newer", "tie-older"], "equal views break the tie by newest publishedAt");
+  console.log("ok  pickMostViewedThisMonth: equal-views tie-break is publishedAt desc");
+
+  // n caps the result.
+  assert.equal(pickMostViewedThisMonth([topThisMonth, midThisMonth, straddler], 2, now).length, 2, "slices to n");
+
+  // Wired end-to-end: must not throw against whatever getClips() actually
+  // returns (sample data here — no FB/YT env set), even though sample clips
+  // carry no views and so yield an empty result.
+  assert.deepEqual(await getMostViewedThisMonth(), [], "sample clips have no views — nothing qualifies");
+  console.log("ok  getMostViewedThisMonth: wired to getClips(), returns [] when no clip has a real view count");
 }
 
 /**

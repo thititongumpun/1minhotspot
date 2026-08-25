@@ -51,6 +51,9 @@ const toClip = (r: Record<string, unknown>): Clip => ({
   embedUrl: String(r.embed_url),
   permalink: String(r.permalink),
   tags: Array.isArray(r.tags) ? (r.tags as string[]) : [],
+  // 0 and "no count" are different facts (see Clip.views) — only surface a
+  // real, positive count, never a fabricated 0 for a clip that never had one.
+  views: Number(r.views) > 0 ? Number(r.views) : undefined,
 });
 
 /**
@@ -84,13 +87,13 @@ export async function upsertClip(clip: Clip): Promise<boolean> {
         slug, id, source, title, summary, body, category,
         published_at, updated_at, duration_sec,
         thumbnail_url, thumbnail_width, thumbnail_height,
-        embed_url, permalink, tags
+        embed_url, permalink, tags, views
       ) values (
         ${clip.slug}, ${clip.id}, ${clip.source}, ${clip.title}, ${clip.summary},
         ${clip.body}, ${clip.category},
         ${clip.publishedAt}, ${clip.updatedAt}, ${clip.durationSec},
         ${clip.thumbnail.url}, ${clip.thumbnail.width}, ${clip.thumbnail.height},
-        ${clip.embedUrl}, ${clip.permalink}, ${clip.tags}::text[]
+        ${clip.embedUrl}, ${clip.permalink}, ${clip.tags}::text[], ${clip.views ?? 0}
       )
       on conflict (slug) do update set
         id               = excluded.id,
@@ -107,7 +110,12 @@ export async function upsertClip(clip: Clip): Promise<boolean> {
         thumbnail_height = excluded.thumbnail_height,
         embed_url        = excluded.embed_url,
         permalink        = excluded.permalink,
-        tags             = excluded.tags
+        tags             = excluded.tags,
+        -- ponytail: views freeze once a clip ages out of the 50-item feed
+        -- window; paginate /videos if that matters. GREATEST means a stale
+        -- refresh (or a clip that has aged out and reports 0) can never claw
+        -- a count back down — the live feed is the fresher truth, but only upward.
+        views            = greatest(clips.views, excluded.views)
     `;
     return true;
   });
@@ -144,6 +152,36 @@ export async function getStoredClips(limit = DEFAULT_LIMIT): Promise<Clip[]> {
   return run("getStoredClips", [], async (sql) => {
     const rows = await sql`
       select * from clips_full order by published_at desc limit ${Math.max(0, limit)}
+    `;
+    return rows.map(toClip);
+  });
+}
+
+/**
+ * Top N by view count within the current Bangkok calendar month, ranked in SQL.
+ *
+ * Not a filter over getStoredClips(): that caps at DEFAULT_LIMIT rows and the
+ * Page publishes ~75 reels/day, so 500 rows is ~6.7 days — from the 8th of any
+ * month on, an in-memory "this month" ranking would be structurally blind to
+ * most of the month.
+ *
+ * The double `at time zone` is deliberate and verified against the live DB:
+ * the inner one turns `now()` (timestamptz) into Bangkok wall-clock time so
+ * date_trunc finds the Bangkok month boundary; the outer one reads that naive
+ * timestamp back *as* Bangkok local, yielding the absolute instant
+ * 2026-08-01 00:00+07 (= 2026-07-31T17:00Z) that compares against published_at.
+ * Independent of the server's TimeZone setting, which on Neon is GMT.
+ *
+ * views > 0 mirrors toClip: 0 means "no count", not "nobody watched".
+ */
+export async function getMostViewed(n: number): Promise<Clip[]> {
+  return run("getMostViewed", [], async (sql) => {
+    const rows = await sql`
+      select * from clips_full
+      where published_at >= date_trunc('month', now() at time zone 'Asia/Bangkok') at time zone 'Asia/Bangkok'
+        and views > 0
+      order by views desc, published_at desc
+      limit ${Math.max(0, n)}
     `;
     return rows.map(toClip);
   });

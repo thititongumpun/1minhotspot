@@ -5,7 +5,7 @@ import { fetchYouTubeClips } from "./providers/youtube";
 import { getSourceArticle } from "./providers/source-article";
 import { sampleClips } from "./sample-clips";
 import { hasDb } from "./db";
-import { getStoredClipBySlug, getStoredClips, upsertClip } from "./store";
+import { getMostViewed, getStoredClipBySlug, getStoredClips, upsertClip } from "./store";
 
 const byNewest = (a: Clip, b: Clip) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt);
 
@@ -118,6 +118,62 @@ export async function getClipsByCategory(cat: CategorySlug): Promise<Clip[]> {
 
 export async function getLatest(n: number): Promise<Clip[]> {
   return (await getClips()).slice(0, Math.max(0, n));
+}
+
+/** Bangkok Y/M via Intl, same pattern as components/format.ts `formatDate` — the
+ *  host may run in UTC (or anywhere), so the month boundary can't be derived
+ *  from the host's own local clock. */
+const bangkokYearMonth = (d: Date): { year: string; month: string } => {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(d);
+  const year = parts.find((p) => p.type === "year")?.value ?? "1970";
+  const month = parts.find((p) => p.type === "month")?.value ?? "01";
+  return { year, month };
+};
+
+/**
+ * Filter+sort only, split out from getMostViewedThisMonth so the Bangkok-month
+ * boundary math is testable without a live/sample data round trip through
+ * getClips(). `now` is a param (not `new Date()` inline) for the same reason.
+ */
+export function pickMostViewedThisMonth(clips: Clip[], n: number, now: Date): Clip[] {
+  const { year, month } = bangkokYearMonth(now);
+  const monthStart = Date.parse(`${year}-${month}-01T00:00:00+07:00`);
+
+  return clips
+    .filter(
+      (c) =>
+        Date.parse(c.publishedAt) >= monthStart &&
+        typeof c.views === "number" &&
+        Number.isFinite(c.views) &&
+        c.views > 0,
+    )
+    .sort((a, b) => (b.views as number) - (a.views as number) || Date.parse(b.publishedAt) - Date.parse(a.publishedAt))
+    .slice(0, Math.max(0, n));
+}
+
+/**
+ * Top N Facebook clips by view count within the current Bangkok calendar
+ * month. Bangkok is a fixed UTC+7 with no DST, so the ISO string built inside
+ * pickMostViewedThisMonth is exact — no library needed for what's a one-line
+ * offset.
+ *
+ * The DB path is the real one: getClips() is capped at DEFAULT_LIMIT rows
+ * (~6.7 days at this Page's publish rate), so ranking it in memory can only
+ * ever see the tail of the month. getClips() is still awaited first — it is
+ * what archives the live window, so the ranking runs after today's views land
+ * — and its result is the no-database fallback.
+ */
+export async function getMostViewedThisMonth(n = 5): Promise<Clip[]> {
+  const clips = await getClips();
+  if (hasDb()) {
+    const ranked = await getMostViewed(n);
+    if (ranked.length > 0) return ranked;
+  }
+  return pickMostViewedThisMonth(clips, n, new Date());
 }
 
 export async function getLeadAndRundown(): Promise<{

@@ -34,6 +34,10 @@ create table if not exists clips (
   tags              text[]      not null default '{}'
 );
 
+-- Additive, safe to re-run: upgrades an existing database when the create
+-- table above no-ops because the table already exists.
+alter table clips add column if not exists views integer not null default 0;
+
 -- Hot read path 1: newest-first listing (home, /videos, sitemap).
 -- Also the index the Google News sitemap's 48h window rides:
 --   where published_at > now() - interval '48 hours' order by published_at desc
@@ -107,6 +111,11 @@ select
   s.script_th,
   s.rewritten_title,
   s.source_url,
-  s.source_publisher
+  s.source_publisher,
+  -- Appended at the end, not alongside the other `clips` columns above:
+  -- CREATE OR REPLACE VIEW can only add new output columns at the end of the
+  -- list — inserting one in the middle errors "cannot change name of view
+  -- column" on a database that already has this view.
+  c.views
 from clips c
 left join clip_scripts s on s.video_id = c.id;

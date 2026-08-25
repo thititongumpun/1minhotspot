@@ -1,6 +1,6 @@
 // Self-check, no framework: `pnpm exec tsx lib/providers/facebook.test.ts`. Exits 0 when green.
 import assert from "node:assert/strict";
-import { pickFormat } from "./facebook";
+import { FIELDS_WITHOUT_VIEWS, pickFormat } from "./facebook";
 
 // The four sizes Graph actually returns for a reel, smallest first.
 const GRAPH = [
@@ -27,6 +27,18 @@ function main() {
   assert.equal(pickFormat([{ filter: "native", width: 1080 }]), null, "drops dimensionless entries");
   assert.equal(pickFormat([]), null, "empty");
   assert.equal(pickFormat(undefined), null, "absent field falls through to thumbnails");
+
+  // The degraded field list is what stands between a Graph rejection of
+  // `views` and the whole site dropping to fabricated sample data. It must
+  // lose exactly one field and stay a valid comma list — no empty entry from
+  // a stray comma, whatever position `views` was in.
+  const fields = FIELDS_WITHOUT_VIEWS.split(",");
+  assert.ok(!fields.includes("views"), "views is gone");
+  assert.ok(fields.includes("id") && fields.includes("length"), "everything else survives");
+  assert.ok(
+    fields.every((f) => f.length > 0),
+    "no empty field left behind by the removal",
+  );
 
   console.log("facebook.test.ts OK");
 }

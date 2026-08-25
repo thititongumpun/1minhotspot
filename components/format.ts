@@ -23,6 +23,32 @@ export function formatDate(iso: string): string {
   return fmt.format(new Date(iso));
 }
 
+/**
+ * Thai-reader view count (`1.2 หมื่นครั้ง`). Intl's own compact notation does
+ * the whole ladder — hand-rolling K/M would be both wrong for this audience
+ * (Thai counts in พัน/หมื่น/แสน/ล้าน, not thousands/millions) and a second
+ * rounding rule to keep in sync.
+ *
+ * `compactDisplay: "long"` is the load-bearing option: th-TH's *short* compact
+ * form is CLDR's "1.2K", i.e. Latin letters on an all-Thai page. The locale is
+ * pinned to "th-TH" for the same reason formatDate pins its timeZone — the
+ * host default would render this in English on any non-Thai box.
+ *
+ * The unit word attaches directly to a Thai magnitude word (`หมื่นครั้ง`) but
+ * needs a space after a bare numeral (`999 ครั้ง`), which is what the
+ * trailing-digit test picks apart.
+ */
+const viewsFormat = new Intl.NumberFormat("th-TH", {
+  notation: "compact",
+  compactDisplay: "long",
+  maximumFractionDigits: 1,
+});
+
+export function formatViews(n: number): string {
+  const compact = viewsFormat.format(Math.max(0, Math.round(n)));
+  return /\d$/.test(compact) ? `${compact} ครั้ง` : `${compact}ครั้ง`;
+}
+
 /** The signature hot-rail fill: min(durationSec/60, 1) * 100%, as a CSS percentage. */
 export function railFill(sec: number): string {
   return `${Math.round(Math.min(Math.max(sec, 0) / 60, 1) * 100)}%`;

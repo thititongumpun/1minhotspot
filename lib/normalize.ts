@@ -161,6 +161,7 @@ export type RawClip = {
   embedUrl: string;
   permalink: string;
   tags?: string[];
+  views?: number;
 };
 
 /** Shared provider → Clip normalizer. Returns null for a clip with no usable
@@ -188,5 +189,6 @@ export function buildClip(raw: RawClip): Clip | null {
     embedUrl: raw.embedUrl,
     permalink: raw.permalink,
     tags,
+    views: raw.views,
   };
 }

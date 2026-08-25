@@ -39,6 +39,14 @@ export type Clip = {
    * when we have nothing of our own to say.
    */
   hasScript?: boolean;
+  /**
+   * Facebook reel view count from the /videos edge. Optional because YouTube
+   * and sample sources don't have one, and a clip that has aged out of the
+   * 50-item /videos window (see facebook.ts) keeps whatever count was last
+   * seen rather than getting refreshed — undefined, not 0, is what "we never
+   * had a real number" looks like.
+   */
+  views?: number;
 };
 
 /** Display order for category strips and nav. */

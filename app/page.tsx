@@ -1,10 +1,16 @@
 import type { Metadata } from "next";
-import { getClipsByCategory, getLatest, getLeadAndRundown } from "@/lib/clips";
+import {
+  getClipsByCategory,
+  getLatest,
+  getLeadAndRundown,
+  getMostViewedThisMonth,
+} from "@/lib/clips";
 import { CATEGORIES } from "@/lib/types";
 import { absoluteUrl, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 import { ClipCard } from "@/components/clip-card";
 import { JsonLd } from "@/components/json-ld";
 import { LeadStory } from "@/components/lead-story";
+import { MostViewed } from "@/components/most-viewed";
 import { RundownRow } from "@/components/rundown-row";
 import { SectionHead } from "@/components/section-head";
 import { Ticker } from "@/components/ticker";
@@ -20,9 +26,10 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  const [tickerClips, { lead, subs, rundown }, categoryClips] = await Promise.all([
+  const [tickerClips, { lead, subs, rundown }, mostViewed, categoryClips] = await Promise.all([
     getLatest(5),
     getLeadAndRundown(),
+    getMostViewedThisMonth(5),
     Promise.all(CATEGORIES.map((c) => getClipsByCategory(c.slug))),
   ]);
 
@@ -54,6 +61,8 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      <MostViewed clips={mostViewed} />
 
       {CATEGORIES.map((cat, i) => {
         const clips = categoryClips[i].slice(0, 4);
