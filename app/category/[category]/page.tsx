@@ -22,8 +22,8 @@ export async function generateMetadata({
   if (!found) return {};
 
   return {
-    title: `${found.label} — คลิปข่าวล่าสุด`,
-    description: `คลิปข่าว${found.label}สั้น กระชับ อัปเดตล่าสุดจากสรุปข่าวร้อนใน 1 นาที`,
+    title: `${found.label}วันนี้ — คลิปข่าวสั้น`,
+    description: `รวมคลิป${found.label}วันนี้ สั้น กระชับ จบในนาทีเดียว อัปเดตใหม่ทุกวันจากสรุปข่าวร้อนใน 1 นาที`,
     alternates: { canonical: absoluteUrl(`/category/${category}`) },
   };
 }

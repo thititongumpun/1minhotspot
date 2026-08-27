@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import {
   absoluteUrl,
+  MAX_DESCRIPTION,
   newsArticleJsonLd,
   organizationJsonLd,
   siteUrl,
@@ -69,6 +70,15 @@ function main() {
   assert.equal(videoObjectJsonLd(clip).inLanguage, "th-TH");
   assert.equal(websiteJsonLd().inLanguage, "th-TH");
   console.log("ok  inLanguage: always th-TH");
+
+  // WebSite needs a description for it to be worth anything to a crawler.
+  const websiteDescription = websiteJsonLd().description;
+  assert.ok(websiteDescription.length > 0, "websiteJsonLd().description is empty");
+  assert.ok(
+    websiteDescription.length < MAX_DESCRIPTION,
+    `websiteJsonLd().description is ${websiteDescription.length} chars, over the ${MAX_DESCRIPTION} budget`,
+  );
+  console.log("ok  websiteJsonLd: description is non-empty and under budget");
 
   // The 110-char cap is the whole point: Google drops longer headlines.
   const longLatin = { ...clip, title: `${"word ".repeat(40)}end` };

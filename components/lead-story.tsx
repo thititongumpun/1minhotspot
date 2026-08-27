@@ -44,7 +44,7 @@ export function LeadStory({
           {clip.title}
         </Heading>
         <p className="timecode mt-2 flex items-center gap-1.5">
-          {formatDate(clip.publishedAt)}
+          <time dateTime={clip.publishedAt}>{formatDate(clip.publishedAt)}</time>
           <span aria-hidden>·</span>
           {formatTimecode(clip.durationSec)}
         </p>

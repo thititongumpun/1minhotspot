@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { siteUrl } from "@/lib/seo";
+import { siteUrl, SITE_DESCRIPTION } from "@/lib/seo";
 import { fontVars } from "./fonts";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -16,8 +16,16 @@ export const metadata: Metadata = {
     default: "ข่าววันนี้ทุกหมวด | สรุปข่าวร้อนใน 1 นาที",
     template: "%s | สรุปข่าวร้อนใน 1 นาที",
   },
-  description:
-    "รวมคลิปข่าวสั้นรอบวัน อัปเดตไว จบในนาทีเดียว ทันทุกกระแสสังคม บันเทิง การเมือง เศรษฐกิจ และไวรัล",
+  description: SITE_DESCRIPTION,
+  // public/logo.png, not the app/icon.png file convention: that route is served
+  // with a build hash, so this keeps the one icon crawlers see on a stable,
+  // unhashed URL (the same file app/manifest.ts already points at).
+  // apple is re-stated because setting `icons` at all drops the app/apple-icon.png
+  // convention's own <link>; the file (and its route) still serves it.
+  icons: {
+    icon: [{ url: "/logo.png", sizes: "512x512", type: "image/png" }],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

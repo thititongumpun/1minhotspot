@@ -20,8 +20,6 @@ export const revalidate = 3600;
 export const metadata: Metadata = {
   // absolute: the home title already carries the brand; the layout template would double it.
   title: { absolute: "ข่าววันนี้ทุกหมวด | สรุปข่าวร้อนใน 1 นาที" },
-  description:
-    "รวมคลิปข่าวสั้นรอบวัน อัปเดตไว จบในนาทีเดียว ทันทุกกระแสสังคม บันเทิง การเมือง เศรษฐกิจ และไวรัล",
   alternates: { canonical: absoluteUrl("/") },
 };
 
@@ -40,9 +38,10 @@ export default async function Home() {
       <Ticker clips={tickerClips} />
 
       <section className="container-hot py-8 lg:py-12">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-10">
+        <SectionHead kicker="อัปเดตทุกวัน" heading="ข่าววันนี้ สรุปข่าวร้อนใน 1 นาที" as="h1" />
+        <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-10">
           <div>
-            <LeadStory clip={lead} as="h1" />
+            <LeadStory clip={lead} />
             {subs.length > 0 && (
               <div className="rule mt-8 grid grid-cols-1 gap-6 pt-6 sm:grid-cols-2 lg:gap-8">
                 {subs.map((clip) => (

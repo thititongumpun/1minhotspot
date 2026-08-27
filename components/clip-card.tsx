@@ -26,7 +26,7 @@ export function ClipCard({ clip, eager }: { clip: Clip; eager?: boolean }) {
       <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <span className="kicker">{categoryLabel(clip.category)}</span>
         <span className="timecode flex items-center gap-1.5 whitespace-nowrap">
-          {formatDate(clip.publishedAt)}
+          <time dateTime={clip.publishedAt}>{formatDate(clip.publishedAt)}</time>
           <span aria-hidden>·</span>
           {formatTimecode(clip.durationSec)}
         </span>

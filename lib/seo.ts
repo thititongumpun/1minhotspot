@@ -49,7 +49,10 @@ export function absoluteUrl(path: string): string {
 }
 
 /** Google shows roughly this much of a meta description. */
-const MAX_DESCRIPTION = 160;
+export const MAX_DESCRIPTION = 160;
+
+export const SITE_DESCRIPTION =
+  "รวมคลิปข่าวสั้นรอบวัน อัปเดตไว จบในนาทีเดียว ทันทุกกระแสสังคม บันเทิง การเมือง เศรษฐกิจ และไวรัล";
 
 /**
  * The description Google and the social cards see. Preference order is whatever
@@ -175,6 +178,7 @@ export function websiteJsonLd() {
     "@type": "WebSite",
     name: SITE_NAME,
     url: absoluteUrl("/"),
+    description: SITE_DESCRIPTION,
     inLanguage: LANG,
     publisher: organization(),
   };
