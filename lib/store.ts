@@ -32,6 +32,9 @@ const toClip = (r: Record<string, unknown>): Clip => ({
   // The rewritten headline wins when n8n produced one; the slug stays derived
   // from the original title so the URL never moves.
   title: (r.rewritten_title as string) || String(r.title),
+  // List rows carry none of these columns (see getStoredClips): the coalesces
+  // below yield "" / false, which is the same state a caption-less clip already
+  // has. getClip() in lib/clips.ts hydrates the article path from the full row.
   summary: (r.summary as string) ?? "",
   // The rewritten narration IS the article body when present. When it is not,
   // fall through to whatever the provider description yielded — possibly "",
@@ -148,10 +151,19 @@ export async function upsertScript(input: ScriptInput): Promise<boolean> {
   });
 }
 
+// ponytail: list projection duplicated verbatim in getMostViewed — the neon
+// tagged template can't interpolate an identifier list. Adding a column that a
+// listing renders means adding it to BOTH. Move to a `clips_list` view in
+// db/schema.sql if a third list query ever appears.
 export async function getStoredClips(limit = DEFAULT_LIMIT): Promise<Clip[]> {
   return run("getStoredClips", [], async (sql) => {
     const rows = await sql`
-      select * from clips_full order by published_at desc limit ${Math.max(0, limit)}
+      select
+        slug, id, source, title, category,
+        published_at, updated_at, duration_sec,
+        thumbnail_url, thumbnail_width, thumbnail_height,
+        embed_url, permalink, views, rewritten_title
+      from clips_full order by published_at desc limit ${Math.max(0, limit)}
     `;
     return rows.map(toClip);
   });
@@ -177,7 +189,12 @@ export async function getStoredClips(limit = DEFAULT_LIMIT): Promise<Clip[]> {
 export async function getMostViewed(n: number): Promise<Clip[]> {
   return run("getMostViewed", [], async (sql) => {
     const rows = await sql`
-      select * from clips_full
+      select
+        slug, id, source, title, category,
+        published_at, updated_at, duration_sec,
+        thumbnail_url, thumbnail_width, thumbnail_height,
+        embed_url, permalink, views, rewritten_title
+      from clips_full
       where published_at >= date_trunc('month', now() at time zone 'Asia/Bangkok') at time zone 'Asia/Bangkok'
         and views > 0
       order by views desc, published_at desc
@@ -191,19 +208,6 @@ export async function getStoredClipBySlug(slug: string): Promise<Clip | null> {
   return run(`getStoredClipBySlug(${slug})`, null, async (sql) => {
     const rows = await sql`select * from clips_full where slug = ${slug} limit 1`;
     return rows.length > 0 ? toClip(rows[0]) : null;
-  });
-}
-
-export async function getStoredClipsByCategory(
-  category: CategorySlug,
-  limit = DEFAULT_LIMIT,
-): Promise<Clip[]> {
-  return run(`getStoredClipsByCategory(${category})`, [], async (sql) => {
-    const rows = await sql`
-      select * from clips_full where category = ${category}
-      order by published_at desc limit ${Math.max(0, limit)}
-    `;
-    return rows.map(toClip);
   });
 }
 

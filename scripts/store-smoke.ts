@@ -43,7 +43,6 @@ async function main() {
     upsertScript,
     getStoredClips,
     getStoredClipBySlug,
-    getStoredClipsByCategory,
     getStoredSourceUrl,
   } = await import("../lib/store");
   const { getDb, hasDb } = await import("../lib/db");
@@ -56,7 +55,6 @@ async function main() {
   assert.equal(getDb(), null, "getDb() must return null with DATABASE_URL unset");
   assert.deepEqual(await getStoredClips(), [], "getStoredClips() must return []");
   assert.equal(await getStoredClipBySlug(SLUG), null, "getStoredClipBySlug() must return null");
-  assert.deepEqual(await getStoredClipsByCategory("viral"), [], "byCategory() must return []");
   assert.equal(await upsertClip(fixture("a", "2020-01-02T03:04:05.000Z")), false, "upsert -> false");
   assert.equal(await upsertScript({ videoId: VIDEO_ID, scriptTh: "x" }), false, "upsertScript -> false");
   assert.equal(await getStoredSourceUrl(VIDEO_ID), null, "getStoredSourceUrl() must return null");
@@ -147,13 +145,25 @@ async function main() {
     assert.equal(orphan[0].n, 0, "an early script must not create a clip row");
     console.log("✓ early script: stored with no clip present, no phantom clip created.");
 
-    // Listing paths see the row.
-    assert.ok((await getStoredClips()).some((c) => c.slug === SLUG), "listing must include the clip");
-    assert.ok(
-      (await getStoredClipsByCategory("viral")).some((c) => c.slug === SLUG),
-      "category listing must include the clip",
+    // Listing path sees the row.
+    const listed = (await getStoredClips()).find((c) => c.slug === SLUG);
+    assert.ok(listed, "listing must include the clip");
+    console.log("✓ listing: newest-first listing returned the clip.");
+
+    // getStoredClips/getMostViewed select an explicit column list (not
+    // select *) to cut Neon egress — body/script_th are deliberately absent.
+    // Prove the trim happened AND that rewritten_title (the join, the
+    // headline actually shown) survived it, and that the by-slug row -
+    // which getClip() uses for the article body - is still full.
+    assert.equal(listed.body, "", "list rows must not carry a body");
+    assert.equal(listed.hasScript, false, "list rows must not carry script_th");
+    assert.equal(listed.title, "พาดหัวที่เขียนใหม่", "list rows MUST keep rewritten_title");
+    assert.equal(
+      (await getStoredClipBySlug(SLUG))?.body,
+      "บทบรรยายที่เขียนใหม่",
+      "by-slug row must still carry the full script body",
     );
-    console.log("✓ listings: newest-first and by-category both returned the clip.");
+    console.log("✓ list projection: no body/script_th, rewritten_title kept, by-slug row still full.");
   } finally {
     await sql`delete from clips where slug = ${SLUG}`;
     await sql`delete from clip_scripts where video_id in (${VIDEO_ID}, 'store-smoke-orphan')`;

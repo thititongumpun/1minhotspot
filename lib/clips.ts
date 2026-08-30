@@ -90,7 +90,7 @@ export async function getClips(): Promise<Clip[]> {
   return [...(await load())].sort(byNewest);
 }
 
-export async function getClip(slug: string): Promise<Clip | null> {
+export const getClip = cache(async (slug: string): Promise<Clip | null> => {
   // Next hands dynamic route params through percent-encoded, so a Thai slug
   // arrives as "%E0%B9%80..." and never matches the decoded clip.slug.
   let wanted = slug;
@@ -102,15 +102,22 @@ export async function getClip(slug: string): Promise<Clip | null> {
   // load() is capped (getStoredClips has a limit), so a deep-archive slug can
   // miss it. Hitting the store by slug is what guarantees an old URL still 200s
   // — the whole point of persisting clips.
+  // load() rows are the trimmed list projection (lib/store.ts) — no body,
+  // summary or tags. The article page needs all three, so the store row is
+  // authoritative here; load() only contributes the live signed CDN urls.
+  const listed = (await load()).find((c) => c.slug === wanted);
+  const stored = await getStoredClipBySlug(wanted);
   const clip =
-    (await load()).find((c) => c.slug === wanted) ?? (await getStoredClipBySlug(wanted));
-  if (!clip || clip.source !== "facebook") return clip;
+    stored && listed
+      ? { ...stored, thumbnail: listed.thumbnail, embedUrl: listed.embedUrl }
+      : (stored ?? listed);
+  if (!clip || clip.source !== "facebook") return clip ?? null;
   // Lazy on purpose: only the article page needs a body, and resolving one
   // costs a Graph call plus a hit on a publisher we do not own. Doing this in
   // load() would put 50 extra round trips behind every listing page render.
   const sourceArticle = await getSourceArticle(clip.id);
   return sourceArticle ? { ...clip, sourceArticle } : clip;
-}
+});
 
 export async function getClipsByCategory(cat: CategorySlug): Promise<Clip[]> {
   return (await getClips()).filter((c) => c.category === cat);
