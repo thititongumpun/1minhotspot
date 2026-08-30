@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getClips } from "@/lib/clips";
+import { getAllClipRefs, type ClipRef } from "@/lib/store";
 import { absoluteUrl } from "@/lib/seo";
 import { CATEGORIES } from "@/lib/types";
 
@@ -9,11 +10,20 @@ import { CATEGORIES } from "@/lib/types";
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const clips = (await getClips()).filter(
-    // Sample clips are fabricated. Keep them locally so the site is browsable,
-    // never hand them to Google.
-    (clip) => clip.source !== "sample" || process.env.NODE_ENV !== "production",
-  );
+  // The store is the complete record and the only uncapped source — getClips()
+  // stops at DEFAULT_LIMIT, which silently drops every older article from the
+  // sitemap once the table outgrows it. Fresh clips not yet archived are not a
+  // gap worth reading 500 fat rows for: news-sitemap.xml is what Google News
+  // polls for the 48h window, and any clip lands here on the next revalidate.
+  const stored = await getAllClipRefs();
+  const clips: ClipRef[] =
+    stored.length > 0
+      ? stored
+      : // No database (local dev, or a failed query): fall back to the live
+        // feed. Sample clips are fabricated — browsable locally, never Google's.
+        (await getClips())
+          .filter((c) => c.source !== "sample" || process.env.NODE_ENV !== "production")
+          .map((c) => ({ slug: c.slug, updatedAt: c.updatedAt }));
 
   return [
     // Home

@@ -169,6 +169,35 @@ export async function getStoredClips(limit = DEFAULT_LIMIT): Promise<Clip[]> {
   });
 }
 
+/** Just enough to emit one <url> entry. Two columns, no join. */
+export type ClipRef = { slug: string; updatedAt: string };
+
+/**
+ * Every archived article, oldest included — the sitemap's row set.
+ *
+ * Deliberately NOT getStoredClips(): that caps at DEFAULT_LIMIT, so once the
+ * table passed 500 rows (Aug 2026, ~75 reels/day) sitemap.xml silently stopped
+ * listing anything older and Google loses the URLs it already indexed. This has
+ * no limit — it can't, the whole point is completeness.
+ *
+ * Uncapped rows are only affordable because the projection is two small
+ * columns: ~120 bytes a row against ~1KB for a clips_full row, so the full
+ * table costs less egress than the capped 500-row read it replaces.
+ *
+ * ponytail: a sitemap tops out at 50,000 URLs — ~600 days at this publish
+ * rate. Split into a sitemap index when that gets close.
+ */
+export async function getAllClipRefs(): Promise<ClipRef[]> {
+  return run("getAllClipRefs", [], async (sql) => {
+    const rows = await sql`
+      select slug, updated_at from clips
+      where source <> 'sample'
+      order by published_at desc
+    `;
+    return rows.map((r) => ({ slug: String(r.slug), updatedAt: iso(r.updated_at) }));
+  });
+}
+
 /**
  * Top N by view count within the current Bangkok calendar month, ranked in SQL.
  *
