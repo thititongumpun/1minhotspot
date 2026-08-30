@@ -145,8 +145,13 @@ async function main() {
     assert.equal(orphan[0].n, 0, "an early script must not create a clip row");
     console.log("✓ early script: stored with no clip present, no phantom clip created.");
 
-    // Listing path sees the row.
-    const listed = (await getStoredClips()).find((c) => c.slug === SLUG);
+    // Listing path sees the row. The fixture is dated 2020 on purpose so it can
+    // never surface on the live site mid-run — which also means it sorts below
+    // the newest DEFAULT_LIMIT rows as soon as `clips` holds more than that
+    // (it passed 500 in Aug 2026). Ask for the whole table: this is a manual
+    // smoke run, its egress does not matter, and a limit tied to the table's
+    // size is the only one that stays true.
+    const listed = (await getStoredClips(Number.MAX_SAFE_INTEGER)).find((c) => c.slug === SLUG);
     assert.ok(listed, "listing must include the clip");
     console.log("✓ listing: newest-first listing returned the clip.");
 
