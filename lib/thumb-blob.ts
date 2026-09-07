@@ -70,28 +70,34 @@ let warned = false;
  * this the fbcdn URL would be written back on every render.
  */
 export async function blobThumbnails(clips: Clip[]): Promise<Clip[]> {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+  // Stored Blob URLs win before anything else — including the credential
+  // check below. If this ran after it, a missing token would hand archive()
+  // the live fbcdn URLs and overwrite every good row in the live window.
+  const stored = await getStoredThumbs(clips.map((c) => c.id));
+  const kept = clips.map((clip) => {
+    const known = stored.get(clip.id);
+    return known && isBlobUrl(known.url) ? { ...clip, thumbnail: known } : clip;
+  });
+
+  // Either a read-write token or OIDC (BLOB_STORE_ID + Vercel-issued token).
+  if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BLOB_STORE_ID) {
     if (!warned) {
       warned = true;
-      console.warn("[thumb-blob] BLOB_READ_WRITE_TOKEN unset — thumbnails stay on the Facebook CDN.");
+      console.warn("[thumb-blob] no Blob credentials — new thumbnails stay on the Facebook CDN.");
     }
-    return clips;
+    return kept;
   }
 
-  const stored = await getStoredThumbs(clips.map((c) => c.id));
   let uploads = 0;
-
   return Promise.all(
-    clips.map(async (clip) => {
-      const known = stored.get(clip.id);
-      if (known && isBlobUrl(known.url)) return { ...clip, thumbnail: known };
+    kept.map(async (clip) => {
+      if (isBlobUrl(clip.thumbnail.url)) return clip;
+      // ponytail: no negative cache — a deleted video (empty Graph `format`)
+      // re-spends a slot every render. Persist a thumb_failed_at column and
+      // skip for 24h if such clips ever crowd out fresh ones.
       if (uploads >= MAX_NEW_UPLOADS) return clip;
       uploads++;
       try {
-        // ponytail: a clip whose Graph `format` is empty (deleted video) never gets a blob
-        // URL, so it re-consumes an upload slot + 3 round-trips on every render, indefinitely.
-        // Not worth negative-caching while most clips succeed; upgrade path if deleted videos
-        // ever crowd out fresh ones: persist a `thumb_failed_at` column and skip for 24h.
         const still = await fetchLargestStill(clip.id);
         if (!still) return clip;
         const res = await fetch(still.url);
