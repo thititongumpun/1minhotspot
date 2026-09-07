@@ -83,14 +83,15 @@ export async function POST(request: Request): Promise<Response> {
   const input: ScriptInput = {
     videoId,
     scriptTh: str(p.scriptTh),
+    articleTh: str(p.articleTh),
     rewrittenTitle: str(p.rewrittenTitle),
     sourceUrl: str(p.sourceUrl),
     sourcePublisher: str(p.sourcePublisher),
   };
   // A payload carrying nothing but an id would be a silent no-op that still
   // answers 200, which would hide a broken n8n expression for weeks.
-  if (!input.scriptTh && !input.rewrittenTitle && !input.sourceUrl && !input.sourcePublisher) {
-    return fail(400, "nothing to store: send at least one of scriptTh, rewrittenTitle, sourceUrl, sourcePublisher");
+  if (!input.scriptTh && !input.articleTh && !input.rewrittenTitle && !input.sourceUrl && !input.sourcePublisher) {
+    return fail(400, "nothing to store: send at least one of scriptTh, articleTh, rewrittenTitle, sourceUrl, sourcePublisher");
   }
 
   // upsertScript never throws; false means no DATABASE_URL or a failed query.

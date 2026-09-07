@@ -5,6 +5,7 @@ import type { CategorySlug, Clip } from "./types";
 export type ScriptInput = {
   videoId: string;
   scriptTh?: string | null;
+  articleTh?: string | null;
   rewrittenTitle?: string | null;
   sourceUrl?: string | null;
   sourcePublisher?: string | null;
@@ -39,9 +40,12 @@ const toClip = (r: Record<string, unknown>): Clip => ({
   // The rewritten narration IS the article body when present. When it is not,
   // fall through to whatever the provider description yielded — possibly "",
   // which the site's honest-placeholder logic already handles.
-  body: (r.script_th as string) || (r.body as string) || "",
+  body: (r.article_th as string) || (r.script_th as string) || (r.body as string) || "",
   // Kept beside the coalesce above, so the two can never disagree.
-  hasScript: Boolean(r.script_th),
+  hasScript: Boolean(r.article_th || r.script_th),
+  // The narration is the transcript whichever text is the body; when there is
+  // no written article the two are the same string, as before.
+  ...(r.script_th ? { transcript: r.script_th as string } : {}),
   category: r.category as CategorySlug,
   publishedAt: iso(r.published_at),
   updatedAt: iso(r.updated_at),
@@ -135,13 +139,14 @@ export async function upsertClip(clip: Clip): Promise<boolean> {
 export async function upsertScript(input: ScriptInput): Promise<boolean> {
   return run(`upsertScript(${input.videoId})`, false, async (sql) => {
     await sql`
-      insert into clip_scripts (video_id, script_th, rewritten_title, source_url, source_publisher)
+      insert into clip_scripts (video_id, script_th, article_th, rewritten_title, source_url, source_publisher)
       values (
-        ${input.videoId}, ${input.scriptTh ?? null}, ${input.rewrittenTitle ?? null},
-        ${input.sourceUrl ?? null}, ${input.sourcePublisher ?? null}
+        ${input.videoId}, ${input.scriptTh ?? null}, ${input.articleTh ?? null},
+        ${input.rewrittenTitle ?? null}, ${input.sourceUrl ?? null}, ${input.sourcePublisher ?? null}
       )
       on conflict (video_id) do update set
         script_th        = coalesce(excluded.script_th, clip_scripts.script_th),
+        article_th       = coalesce(excluded.article_th, clip_scripts.article_th),
         rewritten_title  = coalesce(excluded.rewritten_title, clip_scripts.rewritten_title),
         source_url       = coalesce(excluded.source_url, clip_scripts.source_url),
         source_publisher = coalesce(excluded.source_publisher, clip_scripts.source_publisher),

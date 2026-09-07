@@ -39,6 +39,8 @@ export type Clip = {
    * when we have nothing of our own to say.
    */
   hasScript?: boolean;
+  /** The spoken narration when the page body is the longer written article. */
+  transcript?: string;
   /**
    * Facebook reel view count from the /videos edge. Optional because YouTube
    * and sample sources don't have one, and a clip that has aged out of the

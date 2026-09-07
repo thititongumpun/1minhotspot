@@ -109,6 +109,7 @@ function main() {
     ...clip,
     hasScript: true,
     body: "ย่อหน้าแรกจากสคริปต์\n\nย่อหน้าที่สอง",
+    transcript: "ย่อหน้าแรกจากสคริปต์\n\nย่อหน้าที่สอง",
     sourceArticle: source,
   };
   assert.equal(clipDescription(rewritten), "ย่อหน้าแรกจากสคริปต์");
@@ -117,9 +118,14 @@ function main() {
 
   // transcript is a claim about the video's spoken audio. Only the n8n rewrite
   // is that script; an excerpt or the placeholder is someone else's text.
-  assert.equal(videoObjectJsonLd(rewritten).transcript, rewritten.body);
-  assert.ok(!("transcript" in videoObjectJsonLd({ ...rewritten, hasScript: false })));
-  console.log("ok  VideoObject: transcript only when the body is the spoken script");
+  assert.equal(videoObjectJsonLd(rewritten).transcript, rewritten.transcript);
+  assert.ok(!("transcript" in videoObjectJsonLd({ ...rewritten, transcript: undefined })));
+  // With a written article the body moves on but the transcript stays the
+  // narration — never the article, which nobody speaks in the reel.
+  const withArticle = { ...rewritten, body: "บทความยาว\n\nย่อหน้าสอง\n\nย่อหน้าสาม" };
+  assert.equal(videoObjectJsonLd(withArticle).transcript, rewritten.transcript);
+  assert.equal(clipDescription(withArticle), "บทความยาว");
+  console.log("ok  VideoObject: transcript is always the narration, never the article");
 }
 
 main();

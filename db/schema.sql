@@ -76,6 +76,10 @@ create table if not exists clip_scripts (
 
   updated_at        timestamptz not null default now()
 );
+-- The 250-400 word written article, a second Gemini pass over the same source.
+-- The narration above is what the reel speaks (and the VideoObject transcript);
+-- this is the page body when present. Added after launch, hence the ALTER.
+alter table clip_scripts add column if not exists article_th text;
 
 -- Read-side join. Every site query goes through this view, so the script lookup
 -- can never be forgotten at a call site. A clip with no rewrite yet simply has
@@ -116,6 +120,7 @@ select
   -- CREATE OR REPLACE VIEW can only add new output columns at the end of the
   -- list — inserting one in the middle errors "cannot change name of view
   -- column" on a database that already has this view.
-  c.views
+  c.views,
+  s.article_th
 from clips c
 left join clip_scripts s on s.video_id = c.id;
