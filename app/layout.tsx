@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { siteUrl, SITE_DESCRIPTION } from "@/lib/seo";
 import { fontVars } from "./fonts";
 import { SiteFooter } from "@/components/site-footer";
@@ -52,6 +53,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Analytics />
           <SpeedInsights />
         </main>
+        {/* AdSense: site verification, Auto ads once approved, and Google's
+            consent message (Privacy & messaging) for EEA/UK/CH visitors all
+            ride on this one tag. afterInteractive keeps it off the critical
+            path. */}
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4998059744687395"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
         <SiteFooter />
       </body>
     </html>
