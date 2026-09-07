@@ -75,7 +75,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
                 letterSpacing: "0.04em",
               }}
             >
-              1minhotspot.site
+              1minhotspot.com
             </div>
             <div
               style={{

@@ -259,3 +259,39 @@ export async function getStoredSourceUrl(videoId: string): Promise<string | null
     return typeof url === "string" && url.length > 0 ? url : null;
   });
 }
+
+/**
+ * The archived thumbnail for each of `ids` — how lib/thumb-blob.ts learns
+ * which clips already have a Vercel Blob copy. A DB read, not blob `list()`:
+ * the URL is already a column here, and this stays inside the same
+ * never-throw discipline as everything else in this file.
+ */
+export async function getStoredThumbs(
+  ids: string[],
+): Promise<Map<string, { url: string; width: number; height: number }>> {
+  if (ids.length === 0) return new Map();
+  return run("getStoredThumbs", new Map(), async (sql) => {
+    const rows = await sql`
+      select id, thumbnail_url, thumbnail_width, thumbnail_height
+      from clips where id = any(${ids})
+    `;
+    return new Map(
+      rows.map((r) => [
+        String(r.id),
+        {
+          url: String(r.thumbnail_url),
+          width: Number(r.thumbnail_width),
+          height: Number(r.thumbnail_height),
+        },
+      ]),
+    );
+  });
+}
+
+/** Slug for one Facebook video id, or null. Backs the /v/<id> redirect. */
+export async function getStoredSlugById(id: string): Promise<string | null> {
+  return run(`getStoredSlugById(${id})`, null, async (sql) => {
+    const rows = (await sql`select slug from clips where id = ${id} limit 1`) as { slug: string }[];
+    return rows[0]?.slug ?? null;
+  });
+}

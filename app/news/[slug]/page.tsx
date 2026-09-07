@@ -48,11 +48,6 @@ export async function generateMetadata({
     title: clip.title,
     description,
     alternates: { canonical: url },
-    // No `images` here on purpose: this segment's opengraph-image.tsx already
-    // generates a correct 1200x630 16:9 card. Setting openGraph.images (or
-    // twitter.images) here would override that file convention with
-    // clip.thumbnail — a 1080x1920 portrait still that fails Google's Article
-    // image ratio and Twitter/Facebook's ~1.91:1 card requirement.
     openGraph: {
       type: "article",
       title: clip.title,
@@ -60,6 +55,16 @@ export async function generateMetadata({
       url,
       publishedTime: clip.publishedAt,
       modifiedTime: clip.updatedAt,
+      // Setting openGraph.images overrides this segment's opengraph-image.tsx
+      // file convention, so the generated 1200x630 card is restated by hand —
+      // and stays FIRST, because it is the one Facebook and Twitter use for the
+      // card and a 1080x1920 portrait alone fails their ~1.91:1 requirement.
+      // The reel still follows as a second candidate for crawlers that want a
+      // real, own-domain image rather than the identical-looking card.
+      images: [
+        { url: `${url}/opengraph-image`, width: 1200, height: 630 },
+        { url: clip.thumbnail.url, width: clip.thumbnail.width, height: clip.thumbnail.height },
+      ],
     },
     twitter: { card: "summary_large_image", title: clip.title, description },
   };
@@ -142,7 +147,7 @@ export default async function ArticlePage({ params }: PageProps<"/news/[slug]">)
           ) : null}
 
           <aside className="lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-6">
-            <ClipEmbed src={clip.embedUrl} title={clip.title} />
+            <ClipEmbed src={clip.embedUrl} title={clip.title} poster={clip.thumbnail} />
             <p className="timecode mt-3">ความยาว {formatTimecode(clip.durationSec)}</p>
             <p className="mt-3 text-sm">
               <a

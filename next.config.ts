@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
     unoptimized: true,
     remotePatterns: [
       { protocol: "https", hostname: "**.fbcdn.net" },
+      { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },
       { protocol: "https", hostname: "**.facebook.com" },
       { protocol: "https", hostname: "**.ggpht.com" },
       { protocol: "https", hostname: "**.ytimg.com" },

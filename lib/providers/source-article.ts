@@ -32,7 +32,7 @@ const SOURCE_MARKER = "อ่านเพิ่มเติม";
 
 /** Identifies us honestly to the source hosts, with a way to reach us. */
 const USER_AGENT =
-  "Mozilla/5.0 (compatible; 1minhotspotBot/1.0; +https://www.1minhotspot.site/)";
+  "Mozilla/5.0 (compatible; 1minhotspotBot/1.0; +https://www.1minhotspot.com/)";
 
 /** Query params that are tracking noise, never part of the canonical URL. */
 const TRACKING_PARAM = /^(utm_|fbclid$|gclid$|igshid$|mibextid$|ref$|ref_src$|cmpid$|s_kwcid$|__twitter)/i;

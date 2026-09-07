@@ -8,6 +8,12 @@ const SOCIALS = [
   { label: "YouTube", href: "https://www.youtube.com/@1minhotspot" },
 ];
 
+const SITE_LINKS = [
+  { label: "เกี่ยวกับเรา", href: "/about" },
+  { label: "นโยบายความเป็นส่วนตัว", href: "/privacy" },
+  { label: "ติดต่อเรา", href: "/contact" },
+];
+
 export function SiteFooter() {
   // String, not number: Intl would group "2,026" and localise the digits.
   const year = String(new Date().getFullYear());
@@ -76,11 +82,27 @@ export function SiteFooter() {
 
           <h2 className="kicker mt-8">ติดต่อโฆษณา</h2>
           <a
-            href="mailto:ads@1minhotspot.site"
+            href="mailto:ads@1minhotspot.com"
             className="mt-4 inline-block font-mono text-sm whitespace-nowrap text-fg transition-colors hover:text-hot"
           >
-            ads@1minhotspot.site
+            ads@1minhotspot.com
           </a>
+
+          <nav aria-label="ข้อมูลเว็บไซต์">
+            <h2 className="kicker mt-8">ข้อมูลเว็บไซต์</h2>
+            <ul className="mt-4 space-y-2">
+              {SITE_LINKS.map(({ label, href }) => (
+                <li key={href}>
+                  <Link
+                    href={href}
+                    className="text-sm whitespace-nowrap text-muted transition-colors hover:text-hot"
+                  >
+                    {label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </div>
       </div>
 

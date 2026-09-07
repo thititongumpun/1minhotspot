@@ -1,9 +1,12 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
+type Poster = { url: string; width: number; height: number };
+
 /** Responsive reel embed. Facebook and YouTube URLs both arrive normalized in `clip.embedUrl`. */
-export function ClipEmbed({ src, title }: { src: string; title: string }) {
+export function ClipEmbed({ src, title, poster }: { src: string; title: string; poster?: Poster }) {
   const isFacebook = src.includes("facebook.com");
   const embedSrc = isFacebook ? withWidth(src, 320) : src;
   const [loaded, setLoaded] = useState(false);
@@ -31,6 +34,21 @@ export function ClipEmbed({ src, title }: { src: string; title: string }) {
         href={isFacebook ? "https://static.xx.fbcdn.net" : "https://i.ytimg.com"}
         crossOrigin=""
       />
+
+      {/* The reel's own frame, under the iframe: it is the article's real
+          <img> (Discover ranks on it) and the poster while the embed loads,
+          instead of a second copy of the same frame stacked above the player. */}
+      {poster ? (
+        <Image
+          src={poster.url}
+          width={poster.width}
+          height={poster.height}
+          alt={title}
+          className="absolute inset-0 h-full w-full object-cover"
+          loading="eager"
+          fetchPriority="high"
+        />
+      ) : null}
 
       <iframe
         src={embedSrc}

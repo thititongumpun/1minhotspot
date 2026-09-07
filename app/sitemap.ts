@@ -40,6 +40,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily",
       priority: 0.7,
     },
+    // Static AdSense-prerequisite pages
+    ...(["/about", "/privacy", "/contact"] as const).map((path) => ({
+      url: absoluteUrl(path),
+      lastModified: new Date(),
+      changeFrequency: "yearly" as const,
+      priority: 0.3,
+    })),
     // Category indexes
     ...CATEGORIES.map((category) => ({
       url: absoluteUrl(`/category/${category.slug}`),

@@ -22,12 +22,12 @@ function main() {
   // of NEXT_PUBLIC_SITE_URL, and its default is the real domain, never localhost.
   const savedEnv = process.env.NEXT_PUBLIC_SITE_URL;
   delete process.env.NEXT_PUBLIC_SITE_URL;
-  assert.equal(siteUrl(), "https://www.1minhotspot.site");
+  assert.equal(siteUrl(), "https://www.1minhotspot.com");
   // A bare host is the usual .env slip; unguarded it throws in metadataBase.
-  process.env.NEXT_PUBLIC_SITE_URL = "1minhotspot.site";
-  assert.equal(siteUrl(), "https://1minhotspot.site");
+  process.env.NEXT_PUBLIC_SITE_URL = "1minhotspot.com";
+  assert.equal(siteUrl(), "https://1minhotspot.com");
   process.env.NEXT_PUBLIC_SITE_URL = "not a url at all";
-  assert.equal(siteUrl(), "https://www.1minhotspot.site");
+  assert.equal(siteUrl(), "https://www.1minhotspot.com");
   process.env.NEXT_PUBLIC_SITE_URL = "https://staging.example.com/";
   const origin = siteUrl();
   assert.equal(origin, "https://staging.example.com");
@@ -92,6 +92,11 @@ function main() {
 
   assert.equal(newsArticleJsonLd(clip).headline, clip.title);
   console.log("ok  headline clamp: <=110 chars, short titles untouched");
+
+  // Discover ranks on the first image: the real, own-domain still, never the
+  // generated card that looks identical on every article.
+  assert.equal(newsArticleJsonLd(clip).image[0], clip.thumbnail.url);
+  console.log("ok  NewsArticle: real thumbnail is the first image candidate");
 
   assert.equal(videoObjectJsonLd(clip).duration, "PT47S");
   assert.equal("contentUrl" in videoObjectJsonLd(clip), false);

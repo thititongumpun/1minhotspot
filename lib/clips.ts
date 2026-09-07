@@ -6,6 +6,7 @@ import { getSourceArticle } from "./providers/source-article";
 import { sampleClips } from "./sample-clips";
 import { hasDb } from "./db";
 import { getMostViewed, getStoredClipBySlug, getStoredClips, upsertClip } from "./store";
+import { blobThumbnails } from "./thumb-blob";
 
 const byNewest = (a: Clip, b: Clip) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt);
 
@@ -71,12 +72,16 @@ const load = cache(async (): Promise<Clip[]> => {
   // publishes, which is up to an hour before this code first sees that reel.
   // Writing the clip and then reading through clips_full is what folds the
   // waiting rewrite in on the very first revalidate, instead of the second.
-  await archive(live);
+  // Swap the expiring fbcdn stills for own-domain Blob copies BEFORE
+  // archiving, so the durable URL is what gets written and what the merge
+  // below re-applies over the stored row.
+  const blobbed = await blobThumbnails(live);
+  await archive(blobbed);
   const stored = await getStoredClips();
-  if (stored.length === 0) return live;
+  if (stored.length === 0) return blobbed;
 
   const bySlug = new Map(stored.map((c) => [c.slug, c]));
-  for (const c of live) {
+  for (const c of blobbed) {
     const s = bySlug.get(c.slug);
     // Stored wins on text — it carries the n8n Thai rewrite. Live wins on the
     // Facebook CDN urls, which are signed and expire.

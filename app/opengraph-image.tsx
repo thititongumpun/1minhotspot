@@ -68,7 +68,7 @@ export default async function Image() {
               letterSpacing: "0.04em",
             }}
           >
-            1minhotspot.site
+            1minhotspot.com
           </div>
         </div>
       </div>

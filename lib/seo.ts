@@ -16,11 +16,11 @@ const MAX_HEADLINE = 110;
  * Nothing else in the app may read NEXT_PUBLIC_SITE_URL: a second reader with a
  * different default is how one build ends up emitting two different origins.
  */
-const FALLBACK_ORIGIN = "https://www.1minhotspot.site";
+const FALLBACK_ORIGIN = "https://www.1minhotspot.com";
 
 export function siteUrl(): string {
   const raw = (process.env.NEXT_PUBLIC_SITE_URL || FALLBACK_ORIGIN).trim();
-  // A bare host ("1minhotspot.site") is the usual .env slip. Left alone it
+  // A bare host ("1minhotspot.com") is the usual .env slip. Left alone it
   // reaches `new URL()` in layout.tsx's metadataBase, which throws at module
   // evaluation — one missing scheme 500s every route on the site.
   const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
@@ -52,7 +52,7 @@ export function absoluteUrl(path: string): string {
 export const MAX_DESCRIPTION = 160;
 
 export const SITE_DESCRIPTION =
-  "รวมคลิปข่าวสั้นรอบวัน อัปเดตไว จบในนาทีเดียว ทันทุกกระแสสังคม บันเทิง การเมือง เศรษฐกิจ และไวรัล";
+  "รวมคลิปข่าวสั้นรอบวัน อัปเดตไว จบในนาทีเดียว ทันทุกกระแสสังคม บันเทิง การเมือง เศรษฐกิจ และไวรัล ข่าววันนี้";
 
 /**
  * The description Google and the social cards see. Preference order is whatever
@@ -110,12 +110,12 @@ export function newsArticleJsonLd(clip: Clip) {
     description: clipDescription(clip),
     datePublished: clip.publishedAt,
     dateModified: clip.updatedAt,
-    // The generated 1200x630 16:9 card (this route's opengraph-image.tsx)
-    // first — that's the ratio Google's NewsArticle image guidelines and
-    // Google Images actually want. The portrait reel still follows as a
-    // second candidate; more image candidates never hurts, a portrait-only
-    // array does.
-    image: [`${url}/opengraph-image`, clip.thumbnail.url],
+    // The real reel still first: it is served from our own domain and does not
+    // expire, and it is the one distinctive frame Discover can rank on — the
+    // generated card looks the same on every article. The 1200x630 card
+    // (this route's opengraph-image.tsx) stays as the second candidate, so the
+    // 16:9 ratio Google's NewsArticle guidelines want is still on offer.
+    image: [clip.thumbnail.url, `${url}/opengraph-image`],
     inLanguage: LANG,
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
     author: organization(),
