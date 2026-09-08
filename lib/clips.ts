@@ -1,6 +1,6 @@
 import { cache } from "react";
 import type { CategorySlug, Clip } from "./types";
-import { fetchFacebookClips } from "./providers/facebook";
+import { fetchFacebookClips, fetchFacebookVideo } from "./providers/facebook";
 import { fetchYouTubeClips } from "./providers/youtube";
 import { getSourceArticle } from "./providers/source-article";
 import { sampleClips } from "./sample-clips";
@@ -89,6 +89,22 @@ const load = cache(async (): Promise<Clip[]> => {
   }
   return [...bySlug.values()];
 });
+
+/**
+ * Archive one reel that the hourly feed has not seen yet. /v/<id> calls this
+ * when both the store and the (cached) feed miss: n8n comments that URL
+ * seconds after publish, up to an hour before load() next fetches the feed.
+ * Same pipeline as load() — R2 still first, then upsert — so the row written
+ * here is byte-for-byte what the feed would have written, and the later feed
+ * archive hits the same slug instead of creating a second row.
+ */
+export async function archiveFreshClip(id: string): Promise<Clip | null> {
+  const clip = await fetchFacebookVideo(id);
+  if (!clip) return null;
+  const [blobbed] = await blobThumbnails([clip]);
+  await archive([blobbed]);
+  return blobbed;
+}
 
 /** The only data entry point pages use. Newest first. */
 export async function getClips(): Promise<Clip[]> {
