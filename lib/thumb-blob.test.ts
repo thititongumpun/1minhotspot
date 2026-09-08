@@ -1,6 +1,6 @@
 // Self-check: pnpm exec tsx lib/thumb-blob.test.ts. Exits 0 when green. No network.
 import assert from "node:assert/strict";
-import { isBlobUrl, largestFormat } from "./thumb-blob";
+import { isArchivedUrl, isVercelBlobUrl, largestFormat } from "./thumb-blob";
 import { pickFormat } from "./providers/facebook";
 
 // Shape Graph returns for `fields=format`: one preferred frame at several sizes.
@@ -28,7 +28,13 @@ assert.equal(largestFormat(undefined), null, "missing format field -> null");
 assert.equal(largestFormat([{ filter: "x", width: 100 }]), null, "no picture -> null");
 console.log("ok  largestFormat: empty / undefined / picture-less input yields null");
 
-assert.equal(isBlobUrl("https://abc.public.blob.vercel-storage.com/thumbs/1.jpg"), true);
-assert.equal(isBlobUrl("https://scontent-bkk1-1.xx.fbcdn.net/v/t15/1.jpg?oe=68B0"), false);
-assert.equal(isBlobUrl("not a url"), false, "a malformed URL must not throw");
-console.log("ok  isBlobUrl: blob host true, fbcdn false, malformed false");
+process.env.R2_PUBLIC_HOST = "thumbs.example.com";
+assert.equal(isArchivedUrl("https://thumbs.example.com/thumbs/1.jpg"), true, "R2 host is archived");
+assert.equal(isArchivedUrl("https://abc.public.blob.vercel-storage.com/thumbs/1.jpg"), true, "retired Blob host still archived");
+assert.equal(isArchivedUrl("https://scontent-bkk1-1.xx.fbcdn.net/v/t15/1.jpg?oe=68B0"), false);
+assert.equal(isArchivedUrl("not a url"), false, "a malformed URL must not throw");
+assert.equal(isVercelBlobUrl("https://abc.public.blob.vercel-storage.com/thumbs/1.jpg"), true);
+assert.equal(isVercelBlobUrl("https://thumbs.example.com/thumbs/1.jpg"), false, "R2 rows are not --force targets");
+delete process.env.R2_PUBLIC_HOST;
+assert.equal(isArchivedUrl("https://thumbs.example.com/thumbs/1.jpg"), false, "no R2 host configured -> not archived");
+console.log("ok  isArchivedUrl / isVercelBlobUrl");

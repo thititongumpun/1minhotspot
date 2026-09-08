@@ -1,4 +1,4 @@
-import { put } from "@vercel/blob";
+import { hasR2Credentials, putObject } from "./r2";
 import type { Clip } from "./types";
 import { getStoredThumbs } from "./store";
 
@@ -49,8 +49,26 @@ export async function fetchLargestStill(videoId: string): Promise<Thumb | null> 
   return largestFormat(json.format);
 }
 
-/** Blob's public read host. Anything else is still an expiring provider URL. */
-export function isBlobUrl(url: string): boolean {
+/**
+ * Our own archive host — R2 behind R2_PUBLIC_HOST, plus the retired Vercel
+ * Blob host so rows the backfill has not reached yet still count as archived
+ * (otherwise archive() would overwrite them with an expiring fbcdn URL).
+ * Anything else is still an expiring provider URL.
+ */
+export function isArchivedUrl(url: string): boolean {
+  try {
+    const { hostname } = new URL(url);
+    return (
+      hostname.endsWith(".public.blob.vercel-storage.com") ||
+      (!!process.env.R2_PUBLIC_HOST && hostname === process.env.R2_PUBLIC_HOST)
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** Only the retired host — what the backfill's --force re-uploads. */
+export function isVercelBlobUrl(url: string): boolean {
   try {
     return new URL(url).hostname.endsWith(".public.blob.vercel-storage.com");
   } catch {
@@ -61,7 +79,7 @@ export function isBlobUrl(url: string): boolean {
 let warned = false;
 
 /**
- * Re-point clips at a Vercel Blob copy of their Facebook still.
+ * Re-point clips at an R2 copy of their Facebook still.
  *
  * Never throws: with no blob store, a Graph failure or a failed upload, the
  * clip keeps its (expiring) fbcdn URL — a stale image beats a broken one.
@@ -70,20 +88,19 @@ let warned = false;
  * this the fbcdn URL would be written back on every render.
  */
 export async function blobThumbnails(clips: Clip[]): Promise<Clip[]> {
-  // Stored Blob URLs win before anything else — including the credential
+  // Stored archive URLs win before anything else — including the credential
   // check below. If this ran after it, a missing token would hand archive()
   // the live fbcdn URLs and overwrite every good row in the live window.
   const stored = await getStoredThumbs(clips.map((c) => c.id));
   const kept = clips.map((clip) => {
     const known = stored.get(clip.id);
-    return known && isBlobUrl(known.url) ? { ...clip, thumbnail: known } : clip;
+    return known && isArchivedUrl(known.url) ? { ...clip, thumbnail: known } : clip;
   });
 
-  // Either a read-write token or OIDC (BLOB_STORE_ID + Vercel-issued token).
-  if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BLOB_STORE_ID) {
+  if (!hasR2Credentials()) {
     if (!warned) {
       warned = true;
-      console.warn("[thumb-blob] no Blob credentials — new thumbnails stay on the Facebook CDN.");
+      console.warn("[thumb-blob] no R2 credentials — new thumbnails stay on the Facebook CDN.");
     }
     return kept;
   }
@@ -91,7 +108,7 @@ export async function blobThumbnails(clips: Clip[]): Promise<Clip[]> {
   let uploads = 0;
   return Promise.all(
     kept.map(async (clip) => {
-      if (isBlobUrl(clip.thumbnail.url)) return clip;
+      if (isArchivedUrl(clip.thumbnail.url)) return clip;
       // ponytail: no negative cache — a deleted video (empty Graph `format`)
       // re-spends a slot every render. Persist a thumb_failed_at column and
       // skip for 24h if such clips ever crowd out fresh ones.
@@ -101,14 +118,12 @@ export async function blobThumbnails(clips: Clip[]): Promise<Clip[]> {
         const still = await fetchLargestStill(clip.id);
         if (!still) return clip;
         const res = await fetch(still.url);
-        if (!res.ok || !res.body) return clip;
-        const { url } = await put(`thumbs/${clip.id}.jpg`, res.body, {
-          access: "public",
-          addRandomSuffix: false,
-          allowOverwrite: true,
-          contentType: res.headers.get("content-type") ?? "image/jpeg",
-          cacheControlMaxAge: 31536000,
-        });
+        if (!res.ok) return clip;
+        const url = await putObject(
+          `thumbs/${clip.id}.jpg`,
+          await res.arrayBuffer(),
+          res.headers.get("content-type") ?? "image/jpeg",
+        );
         return { ...clip, thumbnail: { url, width: still.width, height: still.height } };
       } catch (err) {
         console.warn(`[thumb-blob] ${clip.id}: ${(err as Error).message}`);

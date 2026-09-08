@@ -45,3 +45,4 @@ next-env.d.ts
 client_secrets.json
 .env*.local
 .env
+backfill.log

@@ -1,27 +1,29 @@
 /**
- * Re-point archived clips at Vercel Blob copies of their Facebook still.
- *   pnpm exec tsx scripts/blob-thumbs.ts           # dry run, prints the diff
- *   pnpm exec tsx scripts/blob-thumbs.ts --apply   # writes
+ * Re-point archived clips at R2 copies of their Facebook still.
+ *   pnpm exec tsx scripts/blob-thumbs.ts                   # dry run, prints the diff
+ *   pnpm exec tsx scripts/blob-thumbs.ts --apply           # writes fbcdn rows
+ *   pnpm exec tsx scripts/blob-thumbs.ts --apply --force   # also re-uploads retired Vercel Blob rows
  *
- * The ~520 rows written before lib/thumb-blob.ts started uploading thumbnails
- * still point at fbcdn URLs, which expire (`oe=` signature) after ~6 days.
- * This is the one-off backfill; new ingests already go through blobThumbnails.
+ * Rows on fbcdn expire (`oe=` signature) after ~6 days; rows on the retired
+ * Vercel Blob store go dark when that store is paused. Both are re-fetched
+ * from Graph, never from the old store. New ingests go through blobThumbnails.
  */
-import { put } from "@vercel/blob";
 import { neon } from "@neondatabase/serverless";
-import { fetchLargestStill, isBlobUrl } from "../lib/thumb-blob";
+import { fetchLargestStill, isArchivedUrl, isVercelBlobUrl } from "../lib/thumb-blob";
+import { hasR2Credentials, putObject } from "../lib/r2";
 import { loadEnvLocal } from "./_env";
 
 loadEnvLocal();
 
 const apply = process.argv.includes("--apply");
+const force = process.argv.includes("--force");
 
 async function main() {
-  const { DATABASE_URL, FB_ACCESS_TOKEN, BLOB_READ_WRITE_TOKEN } = process.env;
+  const { DATABASE_URL, FB_ACCESS_TOKEN } = process.env;
   const missing = [
     !DATABASE_URL && "DATABASE_URL",
     !FB_ACCESS_TOKEN && "FB_ACCESS_TOKEN",
-    apply && !BLOB_READ_WRITE_TOKEN && "BLOB_READ_WRITE_TOKEN",
+    apply && !hasR2Credentials() && "R2_ACCOUNT_ID/R2_ACCESS_KEY_ID/R2_SECRET_ACCESS_KEY/R2_BUCKET/R2_PUBLIC_HOST",
   ].filter(Boolean);
   if (missing.length) {
     console.error(`Need ${missing.join(", ")} in .env.local.`);
@@ -37,7 +39,7 @@ async function main() {
 
   // ponytail: sequential, ~520 rows takes minutes; add a small pool if it's ever re-run at 10x the size.
   for (const row of rows) {
-    if (isBlobUrl(row.thumbnail_url)) continue;
+    if (isArchivedUrl(row.thumbnail_url) && !(force && isVercelBlobUrl(row.thumbnail_url))) continue;
 
     try {
       const still = await fetchLargestStill(row.id);
@@ -47,7 +49,7 @@ async function main() {
       }
 
       const res = await fetch(still.url);
-      if (!res.ok || !res.body) {
+      if (!res.ok) {
         console.warn(`skip ${row.slug}: fetch ${res.status}`);
         continue;
       }
@@ -55,13 +57,11 @@ async function main() {
       console.log(`${still.width}x${still.height}  ${row.slug}`);
 
       if (apply) {
-        const { url } = await put(`thumbs/${row.id}.jpg`, res.body, {
-          access: "public",
-          addRandomSuffix: false,
-          allowOverwrite: true,
-          contentType: res.headers.get("content-type") ?? "image/jpeg",
-          cacheControlMaxAge: 31536000,
-        });
+        const url = await putObject(
+          `thumbs/${row.id}.jpg`,
+          await res.arrayBuffer(),
+          res.headers.get("content-type") ?? "image/jpeg",
+        );
         await sql`
           update clips
              set thumbnail_url = ${url},
