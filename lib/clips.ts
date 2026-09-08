@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import type { CategorySlug, Clip } from "./types";
 import { fetchFacebookClips, fetchFacebookVideo } from "./providers/facebook";
 import { fetchYouTubeClips } from "./providers/youtube";
@@ -58,7 +59,7 @@ async function archive(clips: Clip[]): Promise<void> {
  * ~16h Facebook window. Reads the store BEFORE archiving; the merge below picks
  * the freshly-fetched clips up anyway.
  */
-const load = cache(async (): Promise<Clip[]> => {
+async function loadUncached(): Promise<Clip[]> {
   const live = await fetchLive();
 
   // Sample clips are fabricated. Never archive them, and never union them with
@@ -88,7 +89,13 @@ const load = cache(async (): Promise<Clip[]> => {
     bySlug.set(c.slug, s ? { ...s, thumbnail: c.thumbnail, embedUrl: c.embedUrl } : c);
   }
   return [...bySlug.values()];
-});
+}
+
+// Data Cache for an hour, site-wide. React's cache() only dedupes within one
+// request, so every ISR regeneration of every route (828 article slugs, hourly,
+// under crawler load) re-pulled the 500-row list (~350 kB) and re-upserted the
+// live window — ~500 MB/day of Neon egress against a 12 MB database.
+const load = cache(unstable_cache(loadUncached, ["clips-load"], { revalidate: 3600, tags: ["clips"] }));
 
 /**
  * Archive one reel that the hourly feed has not seen yet. /v/<id> calls this
