@@ -55,6 +55,7 @@ export function ClipEmbed({ src, title, poster }: { src: string; title: string; 
         title={title}
         allowFullScreen
         allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+        loading="lazy" // Facebook pulls ~1.8 MB; competing with poster for LCP (poster covers first paint)
         onLoad={() => setLoaded(true)}
         className="absolute inset-0 h-full w-full border-0"
       />

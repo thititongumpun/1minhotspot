@@ -3,6 +3,8 @@ import { absoluteUrl } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "นโยบายความเป็นส่วนตัว",
+  description:
+    "นโยบายความเป็นส่วนตัวของสรุปข่าวร้อนใน 1 นาที ข้อมูลที่เก็บ คุกกี้ โฆษณา Google AdSense การวิเคราะห์การใช้งาน และสิทธิ์ตาม PDPA",
   alternates: { canonical: absoluteUrl("/privacy") },
 };
 

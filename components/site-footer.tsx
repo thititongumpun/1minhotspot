@@ -47,7 +47,7 @@ export function SiteFooter() {
 
         {/* Menu duplication */}
         <nav aria-label="เมนู">
-          <h2 className="kicker">เมนู</h2>
+          <p className="kicker">เมนู</p>
           <ul className="mt-4 space-y-2">
             {NAV.map(({ href, label }) => (
               <li key={href}>
@@ -64,7 +64,7 @@ export function SiteFooter() {
 
         {/* Socials + ad sales */}
         <div>
-          <h2 className="kicker">ติดตามเรา</h2>
+          <p className="kicker">ติดตามเรา</p>
           <ul className="mt-4 space-y-2">
             {SOCIALS.map(({ label, href }) => (
               <li key={label}>
@@ -80,7 +80,7 @@ export function SiteFooter() {
             ))}
           </ul>
 
-          <h2 className="kicker mt-8">ติดต่อโฆษณา</h2>
+          <p className="kicker mt-8">ติดต่อโฆษณา</p>
           <a
             href="mailto:ads@1minhotspot.com"
             className="mt-4 inline-block font-mono text-sm whitespace-nowrap text-fg transition-colors hover:text-hot"
@@ -89,7 +89,7 @@ export function SiteFooter() {
           </a>
 
           <nav aria-label="ข้อมูลเว็บไซต์">
-            <h2 className="kicker mt-8">ข้อมูลเว็บไซต์</h2>
+            <p className="kicker mt-8">ข้อมูลเว็บไซต์</p>
             <ul className="mt-4 space-y-2">
               {SITE_LINKS.map(({ label, href }) => (
                 <li key={href}>

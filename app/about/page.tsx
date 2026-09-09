@@ -3,6 +3,8 @@ import { absoluteUrl } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "เกี่ยวกับเรา",
+  description:
+    "รู้จักสรุปข่าวร้อนใน 1 นาที ช่องข่าวคลิปสั้นภาษาไทย ที่มาของข่าว วิธีให้เครดิตแหล่งข่าว และช่องทางติดตามบน Facebook และ YouTube",
   alternates: { canonical: absoluteUrl("/about") },
 };
 

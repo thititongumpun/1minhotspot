@@ -3,6 +3,8 @@ import { absoluteUrl } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "ติดต่อเรา",
+  description:
+    "ติดต่อสรุปข่าวร้อนใน 1 นาที สำหรับลงโฆษณา แจ้งแก้ไขข้อมูล หรือเรื่องลิขสิทธิ์ ทางอีเมล ads@1minhotspot.com และเพจ Facebook",
   alternates: { canonical: absoluteUrl("/contact") },
 };
 

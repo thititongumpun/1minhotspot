@@ -44,8 +44,9 @@ export default async function Home() {
             <LeadStory clip={lead} />
             {subs.length > 0 && (
               <div className="rule mt-8 grid grid-cols-1 gap-6 pt-6 sm:grid-cols-2 lg:gap-8">
-                {subs.map((clip) => (
-                  <ClipCard key={clip.id} clip={clip} />
+                {/* On mobile, the first sub-card image is the page's LCP element, so it must not be lazy. */}
+                {subs.map((clip, i) => (
+                  <ClipCard key={clip.id} clip={clip} eager={i === 0} />
                 ))}
               </div>
             )}

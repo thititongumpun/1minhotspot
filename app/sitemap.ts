@@ -26,24 +26,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           .map((c) => ({ slug: c.slug, updatedAt: c.updatedAt }));
 
   return [
-    // Home
+    // Home — request-time new Date() is not a real modification date. Once Google
+    // sees unreliable lastmod values site-wide, it discards them entirely, throwing
+    // away the accurate dates on clip URLs. Leave it omitted here (MetadataRoute.Sitemap
+    // types it as optional).
     {
       url: absoluteUrl("/"),
-      lastModified: new Date(),
       changeFrequency: "daily",
       priority: 0.8,
     },
     // Videos listing
     {
       url: absoluteUrl("/videos"),
-      lastModified: new Date(),
       changeFrequency: "daily",
       priority: 0.7,
     },
     // Static AdSense-prerequisite pages
     ...(["/about", "/privacy", "/contact"] as const).map((path) => ({
       url: absoluteUrl(path),
-      lastModified: new Date(),
       changeFrequency: "yearly" as const,
       priority: 0.3,
     })),
