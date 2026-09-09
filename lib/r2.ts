@@ -26,7 +26,7 @@ let client: AwsClient | undefined;
  * Upload one object and return its public URL. `body` is a buffer, not a
  * stream: R2 rejects unknown-length PUTs, and a thumbnail is ~200KB.
  */
-export async function putObject(key: string, body: ArrayBuffer, contentType: string): Promise<string> {
+export async function putObject(key: string, body: ArrayBuffer | Uint8Array, contentType: string): Promise<string> {
   const { R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET } = process.env;
   if (!hasR2Credentials()) throw new Error("R2 credentials missing");
   client ??= new AwsClient({
@@ -41,7 +41,10 @@ export async function putObject(key: string, body: ArrayBuffer, contentType: str
     `https://${accountId}.r2.cloudflarestorage.com/${R2_BUCKET}/${key}`,
     {
       method: "PUT",
-      body,
+      // Cast: BodyInit rejects Uint8Array<ArrayBufferLike> because the buffer
+      // *could* be a SharedArrayBuffer. sharp's Buffer never is, and fetch
+      // accepts both branches of the union at runtime.
+      body: body as BodyInit,
       headers: {
         "Content-Type": contentType,
         "Content-Length": String(body.byteLength),

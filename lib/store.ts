@@ -48,7 +48,19 @@ const toClip = (r: Record<string, unknown>): Clip => ({
   ...(r.script_th ? { transcript: r.script_th as string } : {}),
   category: r.category as CategorySlug,
   publishedAt: iso(r.published_at),
-  updatedAt: iso(r.updated_at),
+  // max(clip, script): the clip row moves when Facebook edits the video, the
+  // script row moves when n8n rewrites the body. Both are real modifications.
+  // `script_updated_at` is undefined until db/schema.sql has been re-applied —
+  // getStoredClipBySlug does `select *`, so the article page (the only place
+  // dateModified is emitted) picks it up the moment the view is migrated, and
+  // reads the clip timestamp alone until then. The two list projections are
+  // deliberately NOT widened: naming a column the deployed view lacks would
+  // make every list query throw, and run()'s fallback would blank the site.
+  updatedAt: iso(
+    r.script_updated_at && Date.parse(iso(r.script_updated_at)) > Date.parse(iso(r.updated_at))
+      ? r.script_updated_at
+      : r.updated_at,
+  ),
   durationSec: Number(r.duration_sec),
   thumbnail: {
     url: String(r.thumbnail_url),
@@ -110,7 +122,18 @@ export async function upsertClip(clip: Clip): Promise<boolean> {
         body             = excluded.body,
         category         = excluded.category,
         -- published_at intentionally absent: the first publish time is the truth.
-        updated_at       = excluded.updated_at,
+        -- Facebook's updated_time bumps on engagement, not edits, so writing it
+        -- through unconditionally churned dateModified hourly on every article.
+        -- Postgres evaluates every clips.* reference in an ON CONFLICT SET
+        -- against the PRE-update row regardless of assignment order, so these
+        -- comparisons are safe even though title/body/summary are assigned above.
+        updated_at       = case
+                             when clips.title   is distinct from excluded.title
+                               or clips.body    is distinct from excluded.body
+                               or clips.summary is distinct from excluded.summary
+                             then excluded.updated_at
+                             else clips.updated_at
+                           end,
         duration_sec     = excluded.duration_sec,
         thumbnail_url    = excluded.thumbnail_url,
         thumbnail_width  = excluded.thumbnail_width,
@@ -200,6 +223,27 @@ export async function getAllClipRefs(): Promise<ClipRef[]> {
       order by published_at desc
     `;
     return rows.map((r) => ({ slug: String(r.slug), updatedAt: iso(r.updated_at) }));
+  });
+}
+
+/**
+ * Newest `updated_at` per category — the sitemap's five category <lastmod>
+ * values, which were all `new Date()` (a request-time stamp is not a real
+ * modification date, and Google discards lastmod site-wide once it sees
+ * unreliable ones — including the accurate article dates).
+ *
+ * A `group by`, not a widened getAllClipRefs(): five rows off the existing
+ * clips_category_published_at_idx beats carrying a category column through an
+ * uncapped whole-table read.
+ */
+export async function getCategoryLastMod(): Promise<Map<CategorySlug, string>> {
+  return run("getCategoryLastMod", new Map<CategorySlug, string>(), async (sql) => {
+    const rows = await sql`
+      select category, max(updated_at) as last_mod
+      from clips where source <> 'sample'
+      group by category
+    `;
+    return new Map(rows.map((r) => [r.category as CategorySlug, iso(r.last_mod)]));
   });
 }
 

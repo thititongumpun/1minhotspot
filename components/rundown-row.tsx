@@ -2,7 +2,8 @@ import type { CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { Clip } from "@/lib/types";
-import { formatTimecode, railFill } from "./format";
+import { formatRelative, formatTimecode, railFill } from "./format";
+import { smallThumbUrl } from "@/lib/thumb-blob";
 
 /**
  * The signature numbered row: two-digit mono index, 96px thumbnail, headline
@@ -16,7 +17,7 @@ export function RundownRow({ clip, index }: { clip: Clip; index: number }) {
           {String(index).padStart(2, "0")}
         </span>
         <Image
-          src={clip.thumbnail.url}
+          src={smallThumbUrl(clip.thumbnail.url)}
           alt=""
           width={96}
           height={54}
@@ -27,6 +28,10 @@ export function RundownRow({ clip, index }: { clip: Clip; index: number }) {
           {clip.title}
         </span>
         <span className="timecode shrink-0 whitespace-nowrap">
+          <time dateTime={clip.publishedAt} className="hidden sm:inline">
+            {formatRelative(clip.publishedAt)}
+          </time>
+          <span aria-hidden className="hidden sm:inline"> · </span>
           {formatTimecode(clip.durationSec)}
         </span>
       </Link>

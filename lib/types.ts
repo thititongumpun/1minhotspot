@@ -51,13 +51,42 @@ export type Clip = {
   views?: number;
 };
 
-/** Display order for category strips and nav. */
-export const CATEGORIES: ReadonlyArray<{ slug: CategorySlug; label: string }> = [
-  { slug: "society", label: "ข่าวสังคม" },
-  { slug: "entertainment", label: "บันเทิง" },
-  { slug: "politics", label: "การเมือง" },
-  { slug: "viral", label: "ไวรัล" },
-  { slug: "economy", label: "เศรษฐกิจ" },
+/** Display order for category strips and nav.
+ *  `intro` is the 2-3 sentence Thai lede /category/<slug> renders above the grid
+ *  — before it, a category page had zero words outside the cards, which is what
+ *  the audit flagged as thin content. Keep it 2-3 real sentences: never padded,
+ *  never a keyword list. */
+export const CATEGORIES: ReadonlyArray<{ slug: CategorySlug; label: string; intro: string }> = [
+  {
+    slug: "society",
+    label: "ข่าวสังคม",
+    intro:
+      "รวมข่าวสังคมไทยรอบวันในรูปแบบคลิปสั้น ทั้งอุบัติเหตุ คดีความ ภัยพิบัติ และเรื่องราวในชุมชนที่คนพูดถึงมากที่สุด ทุกคลิปสรุปใจความสำคัญให้จบภายในหนึ่งนาที และมีลิงก์ไปยังสำนักข่าวต้นฉบับเมื่อระบุแหล่งที่มาได้",
+  },
+  {
+    slug: "entertainment",
+    label: "บันเทิง",
+    intro:
+      "รวมข่าวบันเทิงไทยและต่างประเทศแบบคลิปสั้น ทั้งความเคลื่อนไหวของดารา นักแสดง ศิลปิน ละคร ซีรีส์ และคอนเสิร์ต เราเลือกเฉพาะเรื่องที่เป็นกระแสจริงในแต่ละวัน แล้วสรุปให้ฟังจบในหนึ่งนาที",
+  },
+  {
+    slug: "politics",
+    label: "การเมือง",
+    intro:
+      "รวมข่าวการเมืองไทยรอบวันในรูปแบบคลิปสั้น ทั้งความเคลื่อนไหวในรัฐสภา นโยบายรัฐบาล การเลือกตั้ง และท่าทีของพรรคการเมือง เราสรุปเฉพาะสาระสำคัญโดยไม่เข้าข้างฝ่ายใด ให้ตามทันสถานการณ์ได้ในหนึ่งนาที",
+  },
+  {
+    slug: "viral",
+    label: "ไวรัล",
+    intro:
+      "รวมเรื่องไวรัลและกระแสโซเชียลที่คนไทยพูดถึงมากที่สุดในแต่ละวัน ทั้งคลิปดัง ดราม่าออนไลน์ และเรื่องราวแปลกที่กลายเป็นที่สนใจ เราสรุปที่มาที่ไปให้ครบในหนึ่งนาที เพื่อให้เข้าใจเรื่องทั้งหมดโดยไม่ต้องไล่อ่านโพสต์ยาว",
+  },
+  {
+    slug: "economy",
+    label: "เศรษฐกิจ",
+    intro:
+      "รวมข่าวเศรษฐกิจที่กระทบชีวิตประจำวันแบบคลิปสั้น ทั้งราคาสินค้า ค่าไฟ ค่าเงินบาท หุ้น ทองคำ และมาตรการของรัฐ เราอธิบายให้เข้าใจง่ายโดยไม่ต้องมีพื้นฐานการเงิน จบในหนึ่งนาที",
+  },
 ];
 
 /** The single place a category slug turns into display text. */

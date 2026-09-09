@@ -23,6 +23,34 @@ export function formatDate(iso: string): string {
   return fmt.format(new Date(iso));
 }
 
+/** `numeric: "auto"` is what turns -1 day into "เมื่อวาน" rather than
+ *  "1 วันที่แล้ว". Locale pinned to "th" for the same reason formatDate pins
+ *  its timeZone: the host default would render this in English. */
+const relativeFormat = new Intl.RelativeTimeFormat("th", { numeric: "auto" });
+
+/**
+ * "3 ชั่วโมงที่แล้ว" — recency, server-rendered.
+ *
+ * ponytail: the pages that render this revalidate hourly, so the string is
+ * stale by up to 1h — one bucket at hour granularity, which self-corrects on
+ * the next revalidate. Every call site wraps it in <time dateTime={iso}>, so
+ * the exact instant is always in the markup for machines. If minute-accurate
+ * recency is ever needed, that is a client component with a tick, not a
+ * shorter revalidate.
+ *
+ * Past a week the relative form stops helping ("47 วันที่แล้ว" is not a date),
+ * so it falls back to formatDate's Buddhist-era date.
+ */
+export function formatRelative(iso: string, now: Date = new Date()): string {
+  // Clamped at 0: a clip whose publishedAt is seconds in the future (clock skew
+  // between Facebook and us) must never render "ในอีก 2 นาที".
+  const mins = Math.max(0, Math.round((now.getTime() - Date.parse(iso)) / 60_000));
+  if (mins < 60) return relativeFormat.format(-mins, "minute");
+  if (mins < 60 * 24) return relativeFormat.format(-Math.round(mins / 60), "hour");
+  if (mins < 60 * 24 * 7) return relativeFormat.format(-Math.round(mins / 1440), "day");
+  return formatDate(iso);
+}
+
 /**
  * Thai-reader view count (`1.2 หมื่นครั้ง`). Intl's own compact notation does
  * the whole ladder — hand-rolling K/M would be both wrong for this audience

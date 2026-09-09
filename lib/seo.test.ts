@@ -9,7 +9,9 @@ import {
   videoObjectJsonLd,
   websiteJsonLd,
   clipDescription,
+  collectionPageJsonLd,
 } from "./seo";
+import { PLACEHOLDER } from "./normalize";
 import { sampleClips } from "./sample-clips";
 
 const clip = sampleClips[0];
@@ -96,7 +98,10 @@ function main() {
   // Discover ranks on the first image: the real, own-domain still, never the
   // generated card that looks identical on every article.
   assert.equal(newsArticleJsonLd(clip).image[0], clip.thumbnail.url);
-  console.log("ok  NewsArticle: real thumbnail is the first image candidate");
+  // Second candidate is the generated 1200x630 OG card — Google wants both a
+  // portrait (the reel still) and a landscape image candidate.
+  assert.equal(newsArticleJsonLd(clip).image[1], `${absoluteUrl(`/news/${clip.slug}`)}/opengraph-image`);
+  console.log("ok  NewsArticle: real thumbnail first, generated OG card second");
 
   assert.equal(videoObjectJsonLd(clip).duration, "PT47S");
   assert.equal("contentUrl" in videoObjectJsonLd(clip), false);
@@ -126,6 +131,32 @@ function main() {
   assert.equal(videoObjectJsonLd(withArticle).transcript, rewritten.transcript);
   assert.equal(clipDescription(withArticle), "บทความยาว");
   console.log("ok  VideoObject: transcript is always the narration, never the article");
+
+  const collection = collectionPageJsonLd({ name: "การเมือง", description: "x", path: "/category/politics", clips: sampleClips });
+  assert.equal(collection.mainEntity.itemListElement.length, Math.min(sampleClips.length, 20));
+  assert.equal(collection.mainEntity.itemListElement[0].position, 1);
+  assert.ok(collection.mainEntity.itemListElement[0].url.startsWith(siteUrl() + "/news/"));
+  assert.equal(collection.url, absoluteUrl("/category/politics"));
+  console.log("ok  collectionPageJsonLd: ItemList capped, 1-based, absolute URLs");
+
+  const long = { ...clip, hasScript: true, body: `${"ประโยคแรกยาวพอสมควรจริง ๆ ".repeat(4)}จบประโยค อีกประโยคหนึ่งที่ยาวเกินงบประมาณไปมากจนต้องตัดทิ้งแน่นอน` };
+  const d = clipDescription(long)!;
+  assert.ok(d.length <= MAX_DESCRIPTION, `${d.length} > ${MAX_DESCRIPTION}`);
+  assert.equal(d.endsWith("…"), false, "a sentence-boundary cut must not add an ellipsis");
+  // One unbroken run has no boundary — must fall back to the ellipsis cut.
+  const runOn = { ...clip, hasScript: true, body: "ก".repeat(400) };
+  assert.ok(clipDescription(runOn)!.endsWith("…"));
+  console.log("ok  clipDescription: sentence boundary without ellipsis, ellipsis fallback on a run-on");
+
+  const bodied = { ...clip, hasScript: true, body: "ตำรวจจับกุมผู้ต้องหา\n\nรายละเอียดเพิ่มเติมอยู่ระหว่างตรวจสอบ" };
+  const ld = newsArticleJsonLd(bodied);
+  assert.equal(ld.articleBody, "ตำรวจจับกุมผู้ต้องหา", "the placeholder must never reach articleBody");
+  // `wordCount` is typed optional (it is omitted, not zero, when there's no body) —
+  // the `!`s are the runtime guarantee this fixture has a body, not a type escape hatch.
+  assert.ok(ld.wordCount! >= 3 && ld.wordCount! < 10, `wordCount ${ld.wordCount} is not a Thai word count`);
+  const empty = newsArticleJsonLd({ ...clip, body: PLACEHOLDER });
+  assert.ok(!("articleBody" in empty) && !("wordCount" in empty), "no body -> neither field");
+  console.log("ok  NewsArticle: articleBody strips the placeholder, wordCount is ICU words");
 }
 
 main();

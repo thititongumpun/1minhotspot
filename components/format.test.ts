@@ -28,7 +28,7 @@ if (!process.env.FORMAT_TEST_LOCALE_PINNED) {
   process.exit(status ?? 1);
 }
 
-import { formatDate, formatTimecode, formatViews, isoDuration, railFill } from "./format";
+import { formatDate, formatRelative, formatTimecode, formatViews, isoDuration, railFill } from "./format";
 
 function main() {
   assert.equal(formatTimecode(47), "0:47");
@@ -76,6 +76,19 @@ function main() {
   assert.equal(isoDuration(60), "PT1M");
   assert.equal(isoDuration(0), "PT0S");
   console.log("ok  isoDuration: PT47S / PT1M3S / PT1M / PT0S");
+
+  const base = new Date("2026-09-09T12:00:00Z");
+  const at = (minsAgo: number) => new Date(base.getTime() - minsAgo * 60_000).toISOString();
+  assert.match(formatRelative(at(5), base), /นาที/);
+  assert.match(formatRelative(at(200), base), /ชั่วโมง/);
+  // 3 days, not 1 or 2: ICU's th "auto" idiom renders -1/-2 days as
+  // เมื่อวาน/เมื่อวานซืน (no "วัน" substring) — only n>=3 reads "N วันที่ผ่านมา".
+  assert.match(formatRelative(at(60 * 24 * 3), base), /วัน/);
+  // Past a week it must be a real date, not "47 วันที่แล้ว".
+  assert.equal(formatRelative(at(60 * 24 * 30), base), formatDate(at(60 * 24 * 30)));
+  // Clock skew must never render a future time.
+  assert.equal(formatRelative(new Date(base.getTime() + 120_000).toISOString(), base), formatRelative(at(0), base));
+  console.log("ok  formatRelative: minute/hour/day ladder, date past a week, no future times");
 }
 
 main();

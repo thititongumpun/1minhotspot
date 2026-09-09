@@ -1,5 +1,5 @@
 import { isoDuration } from "@/components/format";
-import { truncate } from "./normalize";
+import { countWords, PLACEHOLDER, truncate, truncateSentence } from "./normalize";
 import { categoryLabel, type Clip } from "./types";
 
 /** The publisher name. */
@@ -72,12 +72,12 @@ export function clipDescription(clip: Clip): string | undefined {
   // rendering the quotation, and a description promising text the visitor
   // cannot find on the page is exactly the mismatch Google penalises.
   const lead = clip.hasScript ? clip.body.split("\n\n")[0]?.trim() : "";
-  if (lead) return truncate(lead.replace(/\s+/g, " "), MAX_DESCRIPTION);
+  if (lead) return truncateSentence(lead, MAX_DESCRIPTION);
 
   const excerpt = clip.sourceArticle?.excerpt;
-  if (excerpt) return truncate(excerpt.replace(/\s+/g, " "), MAX_DESCRIPTION);
+  if (excerpt) return truncateSentence(excerpt, MAX_DESCRIPTION);
   if (clip.summary.trim() === clip.title.trim()) return undefined;
-  return truncate(clip.summary, MAX_DESCRIPTION);
+  return truncateSentence(clip.summary, MAX_DESCRIPTION);
 }
 
 /** Social profiles, kept in sync with components/site-footer.tsx. */
@@ -90,19 +90,36 @@ const organization = () => ({
   "@type": "Organization" as const,
   name: SITE_NAME,
   url: siteUrl(),
-  // The generated home OG image doubles as the publisher logo — Google wants a
-  // logo on publisher for Top Stories, and this is the only brand image we own.
+  // Google wants a SQUARE publisher logo for Top Stories; the 1200x630 OG card
+  // was being cropped. public/logo.png is a real 512x512 (verified with `file`)
+  // on a stable, unhashed URL — the same file layout.tsx points `icons.icon` at.
   logo: {
     "@type": "ImageObject" as const,
-    url: absoluteUrl("/opengraph-image"),
-    width: 1200,
-    height: 630,
+    url: absoluteUrl("/logo.png"),
+    width: 512,
+    height: 512,
   },
   sameAs: SAME_AS,
 });
 
+/**
+ * The article text as the page actually renders it: PLACEHOLDER paragraphs
+ * stripped. "รายละเอียดเพิ่มเติมอยู่ระหว่างตรวจสอบ" is an honest stand-in for a
+ * body we do not have — it is not article prose, and shipping it as
+ * `articleBody` would claim 6 words of content that say nothing. When nothing
+ * is left, both fields are omitted rather than emitted empty.
+ */
+function articleBodyOf(clip: Clip): string {
+  return clip.body
+    .split("\n\n")
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0 && p !== PLACEHOLDER)
+    .join("\n\n");
+}
+
 export function newsArticleJsonLd(clip: Clip) {
   const url = absoluteUrl(`/news/${clip.slug}`);
+  const body = articleBodyOf(clip);
   return {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
@@ -110,17 +127,17 @@ export function newsArticleJsonLd(clip: Clip) {
     description: clipDescription(clip),
     datePublished: clip.publishedAt,
     dateModified: clip.updatedAt,
-    // The real reel still first: it is served from our own domain and does not
-    // expire, and it is the one distinctive frame Discover can rank on — the
-    // generated card looks the same on every article. The 1200x630 card
-    // (this route's opengraph-image.tsx) stays as the second candidate, so the
-    // 16:9 ratio Google's NewsArticle guidelines want is still on offer.
+    // The real reel still first — it is served from our own domain, does not
+    // expire, and is the one distinctive frame Discover can rank on. The
+    // generated OG card second: Google wants both a portrait and a landscape
+    // image candidate, and the 1200x630 card is the landscape one.
     image: [clip.thumbnail.url, `${url}/opengraph-image`],
     inLanguage: LANG,
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
     author: organization(),
     publisher: organization(),
     articleSection: categoryLabel(clip.category),
+    ...(body ? { articleBody: body, wordCount: countWords(body) } : {}),
     // The excerpt on the page is quoted from the source, not our reporting.
     // isBasedOn names the work we summarised; citation points at the same URL
     // so a crawler reading either property finds the original.
@@ -170,6 +187,46 @@ export function breadcrumbJsonLd(items: ReadonlyArray<{ name: string; url: strin
       name: item.name,
       item: item.url,
     })),
+  };
+}
+
+/** ItemList entries past this add bytes without adding meaning; the page's own
+ *  grid is the full list and every entry is already a crawlable <a href>. */
+const MAX_ITEM_LIST = 20;
+
+/**
+ * A listing page as a CollectionPage whose mainEntity is the ordered ItemList
+ * of its articles. ListItem carries `url` + `name` only — no nested Article
+ * node, which would restate metadata the article page already owns and can
+ * drift from it.
+ */
+export function collectionPageJsonLd(args: {
+  name: string;
+  description: string;
+  path: string;
+  clips: ReadonlyArray<Pick<Clip, "slug" | "title">>;
+}) {
+  const url = absoluteUrl(args.path);
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: args.name,
+    description: args.description,
+    url,
+    inLanguage: LANG,
+    isPartOf: { "@type": "WebSite", name: SITE_NAME, url: absoluteUrl("/") },
+    publisher: organization(),
+    mainEntity: {
+      "@type": "ItemList",
+      itemListOrder: "https://schema.org/ItemListOrderDescending",
+      numberOfItems: args.clips.length,
+      itemListElement: args.clips.slice(0, MAX_ITEM_LIST).map((clip, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        url: absoluteUrl(`/news/${clip.slug}`),
+        name: clip.title,
+      })),
+    },
   };
 }
 

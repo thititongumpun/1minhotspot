@@ -2,14 +2,19 @@ import type { CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { categoryLabel, type Clip } from "@/lib/types";
-import { formatDate, formatTimecode, railFill } from "./format";
+import { formatRelative, formatTimecode, railFill } from "./format";
+import { smallThumbUrl } from "@/lib/thumb-blob";
 
 /** The reusable photo-led card used by every grid on the site. */
 export function ClipCard({ clip, eager }: { clip: Clip; eager?: boolean }) {
   return (
     <Link href={`/news/${clip.slug}`} className="group block min-w-0">
+      {/* The 640px WebP sibling — a listing card never renders wider than that,
+          and the large object is a 1080x1920 reel still. The article poster
+          (components/clip-embed.tsx), NewsArticle.image and og:image all keep
+          the LARGE url: Discover ranks on it and it must stay >=1200px. */}
       <Image
-        src={clip.thumbnail.url}
+        src={smallThumbUrl(clip.thumbnail.url)}
         alt=""
         width={640}
         height={360}
@@ -26,7 +31,7 @@ export function ClipCard({ clip, eager }: { clip: Clip; eager?: boolean }) {
       <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <span className="kicker">{categoryLabel(clip.category)}</span>
         <span className="timecode flex items-center gap-1.5 whitespace-nowrap">
-          <time dateTime={clip.publishedAt}>{formatDate(clip.publishedAt)}</time>
+          <time dateTime={clip.publishedAt}>{formatRelative(clip.publishedAt)}</time>
           <span aria-hidden>·</span>
           {formatTimecode(clip.durationSec)}
         </span>

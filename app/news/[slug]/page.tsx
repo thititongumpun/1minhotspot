@@ -183,8 +183,10 @@ export default async function ArticlePage({ params }: PageProps<"/news/[slug]">)
               having nothing of our own to say; once n8n's Thai narration is the
               body, printing the source's version of the same story underneath
               is the same news twice, the second time in someone else's words.
-              Attribution does not depend on this block — the แหล่งที่มา line
-              below always links the publisher, as does isBasedOn in the JSON-LD.
+              Attribution happens in the footer: when there is a source, the
+              footer links both the original post and the publisher; otherwise
+              it links only the original post and labels it clearly, as does
+              isBasedOn in the JSON-LD.
             */}
             {source && !clip.hasScript ? (
               <figure className="mt-2">
@@ -214,19 +216,29 @@ export default async function ArticlePage({ params }: PageProps<"/news/[slug]">)
           </div>
         </div>
 
+        {/*
+          With a real source article this is attribution: the publisher name
+          link. Without one there is no third-party source to name — the reel
+          is our own — so labelling our own Facebook permalink as a source
+          claims a provenance that does not exist. Call it what it is instead.
+        */}
         <p className="rule mt-10 max-w-[68ch] pt-4 text-sm text-muted">
-          แหล่งที่มา:{" "}
-          <a href={clip.permalink} target="_blank" rel="noopener" className="text-hot hover:underline">
-            {sourceHost}
-          </a>
           {source ? (
             <>
+              แหล่งที่มา:{" "}
+              <a href={clip.permalink} target="_blank" rel="noopener" className="text-hot hover:underline">
+                {sourceHost}
+              </a>
               {" · "}
               <a href={source.url} target="_blank" rel="noopener" className="text-hot hover:underline">
                 {source.publisher}
               </a>
             </>
-          ) : null}
+          ) : (
+            <a href={clip.permalink} target="_blank" rel="noopener" className="text-hot hover:underline">
+              คลิปต้นฉบับ
+            </a>
+          )}
         </p>
       </article>
 

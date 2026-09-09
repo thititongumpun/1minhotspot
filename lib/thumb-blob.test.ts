@@ -1,6 +1,6 @@
 // Self-check: pnpm exec tsx lib/thumb-blob.test.ts. Exits 0 when green. No network.
 import assert from "node:assert/strict";
-import { isArchivedUrl, isVercelBlobUrl, largestFormat } from "./thumb-blob";
+import { isArchivedUrl, isVercelBlobUrl, largestFormat, smallThumbUrl } from "./thumb-blob";
 import { pickFormat } from "./providers/facebook";
 
 // Shape Graph returns for `fields=format`: one preferred frame at several sizes.
@@ -35,6 +35,15 @@ assert.equal(isArchivedUrl("https://scontent-bkk1-1.xx.fbcdn.net/v/t15/1.jpg?oe=
 assert.equal(isArchivedUrl("not a url"), false, "a malformed URL must not throw");
 assert.equal(isVercelBlobUrl("https://abc.public.blob.vercel-storage.com/thumbs/1.jpg"), true);
 assert.equal(isVercelBlobUrl("https://thumbs.example.com/thumbs/1.jpg"), false, "R2 rows are not --force targets");
+
+assert.equal(smallThumbUrl("https://thumbs.example.com/thumbs/123.jpg"), "https://thumbs.example.com/thumbs/123-640.webp");
+assert.equal(smallThumbUrl("https://abc.public.blob.vercel-storage.com/thumbs/123.jpg"), "https://abc.public.blob.vercel-storage.com/thumbs/123.jpg", "retired Blob rows have no sibling");
+assert.equal(smallThumbUrl("https://scontent-bkk1-1.xx.fbcdn.net/v/t15/1.jpg?oe=68B0"), "https://scontent-bkk1-1.xx.fbcdn.net/v/t15/1.jpg?oe=68B0", "fbcdn rows have no sibling");
+assert.equal(smallThumbUrl("https://thumbs.example.com/other/123.jpg"), "https://thumbs.example.com/other/123.jpg", "only the thumbs/ prefix has siblings");
+assert.equal(smallThumbUrl("not a url"), "not a url", "a malformed URL must not throw");
+assert.equal(smallThumbUrl("https://thumbs.example.com/thumbs/123-640.webp"), "https://thumbs.example.com/thumbs/123-640.webp", "idempotent: a small URL is not re-derived");
+console.log("ok  smallThumbUrl: R2 large -> sibling, everything else untouched");
+
 delete process.env.R2_PUBLIC_HOST;
 assert.equal(isArchivedUrl("https://thumbs.example.com/thumbs/1.jpg"), false, "no R2 host configured -> not archived");
 console.log("ok  isArchivedUrl / isVercelBlobUrl");

@@ -67,6 +67,56 @@ export function isArchivedUrl(url: string): boolean {
   }
 }
 
+/** The listing width. Every grid on the site renders a card at <=640 CSS px on
+ *  the widest breakpoint, and the source is a 1080x1920 reel still that
+ *  object-cover crops to 16:9 anyway — 640 is the honest ceiling, not a guess. */
+const SMALL_WIDTH = 640;
+
+/**
+ * The 640px WebP sibling of an archived thumbnail — a NAMING CONVENTION, not a
+ * column. blobThumbnails and scripts/blob-thumbs.ts both write the large object
+ * at the deterministic key `thumbs/<id>.jpg`, so `thumbs/<id>-640.webp` is
+ * recoverable from the URL with no schema change and no widening of the two
+ * duplicated list projections in lib/store.ts.
+ *
+ * Returns the input UNCHANGED for anything that is not an R2 large thumb:
+ * retired Vercel Blob rows, un-archived fbcdn rows, and picsum sample clips
+ * have no sibling object and must keep rendering their own URL.
+ *
+ * The trade-off this buys the simplicity with: nothing verifies the sibling
+ * exists. scripts/small-thumbs.ts must have finished for every pre-existing R2
+ * row BEFORE a build that calls this reaches production, or those cards 404.
+ */
+export function smallThumbUrl(url: string): string {
+  const host = process.env.R2_PUBLIC_HOST;
+  if (!host) return url;
+  try {
+    const u = new URL(url);
+    const id = /^\/thumbs\/(.+)\.jpg$/.exec(u.pathname)?.[1];
+    return u.hostname === host && id ? `https://${host}/thumbs/${id}-${SMALL_WIDTH}.webp` : url;
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * Resize one archived still to the listing width and store it beside the large
+ * object. Exported so scripts/small-thumbs.ts backfills through exactly this
+ * code path — one resize policy, not two that drift.
+ *
+ * withoutEnlargement: a still narrower than 640 is already small enough, and
+ * upscaling invents no detail (same reasoning as fetchLargestStill's note).
+ */
+export async function putSmallThumb(id: string, source: ArrayBuffer): Promise<void> {
+  // Only the ingest path needs the native libvips binding; card rendering must not load it.
+  const sharp = (await import("sharp")).default;
+  const webp = await sharp(Buffer.from(source))
+    .resize({ width: SMALL_WIDTH, withoutEnlargement: true })
+    .webp({ quality: 72 })
+    .toBuffer();
+  await putObject(`thumbs/${id}-${SMALL_WIDTH}.webp`, webp, "image/webp");
+}
+
 /** Only the retired host — what the backfill's --force re-uploads. */
 export function isVercelBlobUrl(url: string): boolean {
   try {
@@ -119,11 +169,20 @@ export async function blobThumbnails(clips: Clip[]): Promise<Clip[]> {
         if (!still) return clip;
         const res = await fetch(still.url);
         if (!res.ok) return clip;
+        const bytes = await res.arrayBuffer();
         const url = await putObject(
           `thumbs/${clip.id}.jpg`,
-          await res.arrayBuffer(),
+          bytes,
           res.headers.get("content-type") ?? "image/jpeg",
         );
+        // Separate try: a sharp failure must never cost us the large upload we
+        // just made. A missing small object degrades to a 404 on ONE card;
+        // losing the large one means the clip re-spends an upload slot forever.
+        try {
+          await putSmallThumb(clip.id, bytes);
+        } catch (err) {
+          console.warn(`[thumb-blob] small ${clip.id}: ${(err as Error).message}`);
+        }
         return { ...clip, thumbnail: { url, width: still.width, height: still.height } };
       } catch (err) {
         console.warn(`[thumb-blob] ${clip.id}: ${(err as Error).message}`);

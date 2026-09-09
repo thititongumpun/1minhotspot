@@ -37,6 +37,50 @@ export function truncate(text: string, max: number): string {
   return `${t.slice(0, end).trimEnd()}…`;
 }
 
+/** Where a Thai or Latin sentence can end. Thai writes no spaces between WORDS
+ *  but does use one between clauses and sentences, so a bare space is the real
+ *  Thai boundary; `.`/`!`/`?`/`。` only count when a space or the end follows,
+ *  so "3.5 ล้าน" and a bare URL are not mistaken for sentence ends. */
+const SENTENCE_END = /[.!?。](?=\s|$)|\s/g;
+
+/** Below this fraction of the budget a "sentence" cut throws away too much —
+ *  fall back to truncate()'s word-boundary cut with its ellipsis. */
+const MIN_SENTENCE_FRACTION = 0.6;
+
+/**
+ * Like truncate(), but prefers a real sentence end. A description that stops on
+ * a boundary reads as a finished thought, so it gets NO ellipsis — the "…" is
+ * what tells a reader the sentence was cut mid-way, and printing it after a
+ * complete sentence is a lie. When no usable boundary exists (one long
+ * unpunctuated Thai run), this is exactly truncate().
+ */
+export function truncateSentence(text: string, max: number): string {
+  const t = text.trim().replace(/\s+/g, " ");
+  if (t.length <= max) return t;
+  // +1 so a boundary sitting exactly at `max` is still considered.
+  const head = t.slice(0, max + 1);
+  let cut = -1;
+  for (const m of head.matchAll(SENTENCE_END)) {
+    // Keep the ./!/?/。 itself; drop a bare separating space.
+    const end = m.index + (m[0].trim() ? 1 : 0);
+    if (end > 0 && end <= max) cut = end;
+  }
+  return cut >= Math.floor(max * MIN_SENTENCE_FRACTION) ? t.slice(0, cut).trimEnd() : truncate(t, max);
+}
+
+/**
+ * Real word count, via ICU's Thai dictionary (the same WORDS segmenter
+ * truncate() uses). Thai has no inter-word spaces, so a space-split would
+ * return ~1 and `body.length` would overstate by ~4x — schema.org's wordCount
+ * means words, and a number wrong by a constant factor is worse than none.
+ * `isWordLike` drops punctuation and whitespace segments.
+ */
+export function countWords(text: string): number {
+  let n = 0;
+  for (const s of WORDS.segment(text)) if (s.isWordLike) n++;
+  return n;
+}
+
 /** Short keyword lists, first match wins; everything else is viral. */
 const KEYWORDS: ReadonlyArray<[CategorySlug, string[]]> = [
   ["politics", ["การเมือง", "รัฐบาล", "รัฐสภา", "เลือกตั้ง", "นายก", "ส.ส.", "politics", "election", "parliament", "cabinet", "minister"]],

@@ -121,6 +121,11 @@ select
   -- list — inserting one in the middle errors "cannot change name of view
   -- column" on a database that already has this view.
   c.views,
-  s.article_th
+  s.article_th,
+  -- The rewrite's own timestamp, so lib/store.ts can take max(clip, script) as
+  -- the real dateModified: an n8n article_th landing IS a body change, but it
+  -- never touches clips.updated_at (archive() writes the raw Facebook caption).
+  -- Aliased because c.updated_at already owns the bare name.
+  s.updated_at as script_updated_at
 from clips c
 left join clip_scripts s on s.video_id = c.id;

@@ -1,5 +1,13 @@
 import { strict as assert } from "node:assert";
 import { existsSync, readFileSync } from "node:fs";
+import { setDefaultAutoSelectFamilyAttemptTimeout } from "node:net";
+
+// Node's happy-eyeballs connect gives each resolved address 250ms by default.
+// Neon's pooler lives in us-east-1 and a TCP handshake from Thailand takes
+// about that long, so every address "times out" and fetch throws
+// AggregateError [ETIMEDOUT] while curl to the same host succeeds. Vercel runs
+// next to the database and never hits this; only the local scripts do.
+setDefaultAutoSelectFamilyAttemptTimeout(2000);
 
 /**
  * Minimal .env.local loader for the tsx scripts. Next loads .env.local itself;
