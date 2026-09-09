@@ -22,7 +22,7 @@ const CSP_REPORT_ONLY = [
   "img-src 'self' data: blob: https://thumbs.1minhotspot.com https://*.fbcdn.net https://*.facebook.com https://i.ytimg.com https://*.ggpht.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://*.adtrafficquality.google https://picsum.photos https://fastly.picsum.photos",
   "font-src 'self' data:",
   "connect-src 'self' https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://*.adtrafficquality.google https://fundingchoicesmessages.google.com https://www.facebook.com https://connect.facebook.net https://va.vercel-scripts.com https://vitals.vercel-insights.com",
-  "frame-src https://www.facebook.com https://web.facebook.com https://www.youtube.com https://www.youtube-nocookie.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://*.adtrafficquality.google https://fundingchoicesmessages.google.com",
+  "frame-src https://www.facebook.com https://www.google.com https://web.facebook.com https://www.youtube.com https://www.youtube-nocookie.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://*.adtrafficquality.google https://fundingchoicesmessages.google.com",
   "media-src 'self' blob: https://*.fbcdn.net",
   "worker-src 'self' blob:",
 ].join("; ");
