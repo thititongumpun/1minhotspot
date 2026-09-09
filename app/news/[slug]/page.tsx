@@ -14,7 +14,7 @@ import { PLACEHOLDER } from "@/lib/normalize";
 import { categoryLabel } from "@/lib/types";
 import { ClipCard } from "@/components/clip-card";
 import { ClipEmbed } from "@/components/clip-embed";
-import { formatDate, formatTimecode, railFill } from "@/components/format";
+import { formatCount, formatDate, formatTimecode, formatViews, railFill } from "@/components/format";
 import { JsonLd } from "@/components/json-ld";
 import { SectionHead } from "@/components/section-head";
 
@@ -128,6 +128,24 @@ export default async function ArticlePage({ params }: PageProps<"/news/[slug]">)
             <span aria-hidden>·</span>
             <span>ความยาว {formatTimecode(clip.durationSec)}</span>
           </p>
+          {/* Facebook engagement, refreshed with the hourly feed. Each count is
+              independent: undefined means never counted, so it is simply absent. */}
+          {(clip.views ?? clip.likes ?? clip.comments) !== undefined && (
+            <p className="timecode mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+              {[
+                clip.views !== undefined && `ยอดชม ${formatViews(clip.views)}`,
+                clip.likes !== undefined && `ถูกใจ ${formatCount(clip.likes, "คน")}`,
+                clip.comments !== undefined && `ความคิดเห็น ${formatCount(clip.comments, "รายการ")}`,
+              ]
+                .filter((s): s is string => Boolean(s))
+                .map((s, i) => (
+                  <span key={s} className="contents">
+                    {i > 0 && <span aria-hidden>·</span>}
+                    <span>{s}</span>
+                  </span>
+                ))}
+            </p>
+          )}
           <span
             aria-hidden
             className="hot-rail mt-3"

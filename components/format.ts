@@ -72,9 +72,14 @@ const viewsFormat = new Intl.NumberFormat("th-TH", {
   maximumFractionDigits: 1,
 });
 
-export function formatViews(n: number): string {
+/** Compact Thai count with a unit word attached (`1.2 หมื่นครั้ง`, `999 ครั้ง`). */
+export function formatCount(n: number, unit: string): string {
   const compact = viewsFormat.format(Math.max(0, Math.round(n)));
-  return /\d$/.test(compact) ? `${compact} ครั้ง` : `${compact}ครั้ง`;
+  return /\d$/.test(compact) ? `${compact} ${unit}` : `${compact}${unit}`;
+}
+
+export function formatViews(n: number): string {
+  return formatCount(n, "ครั้ง");
 }
 
 /** The signature hot-rail fill: min(durationSec/60, 1) * 100%, as a CSS percentage. */

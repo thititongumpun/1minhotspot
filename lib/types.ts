@@ -49,6 +49,9 @@ export type Clip = {
    * had a real number" looks like.
    */
   views?: number;
+  /** Same "undefined means never counted" contract as views. Article page only. */
+  likes?: number;
+  comments?: number;
 };
 
 /** Display order for category strips and nav.

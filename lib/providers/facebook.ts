@@ -24,14 +24,21 @@ const FIELDS = [
   "thumbnails{uri,width,height}",
   "format",
   "views",
+  // Engagement counts for the article page. `.limit(0)` keeps the edge data
+  // empty so only `summary.total_count` comes back — no comment text, no
+  // extra permission surface. Confirmed live on v26.0 alongside `views`.
+  "likes.summary(true).limit(0)",
+  "comments.summary(true).limit(0)",
 ].join(",");
 
-/** The retry field list, if Graph ever rejects `views` (see fetchFacebookClips).
+/** The retry field list, if Graph ever rejects `views`/`likes`/`comments`
+ *  (see fetchFacebookClips). All three engagement fields go together: they
+ *  are the same permission class, and one retry is all graphGet makes.
  *  Split/filter rather than a string replace so it stays correct wherever
  *  `views` sits in FIELDS — including first, where there is no leading comma.
  *  Exported for the self-check in facebook.test.ts. */
 export const FIELDS_WITHOUT_VIEWS = FIELDS.split(",")
-  .filter((f) => f !== "views")
+  .filter((f) => !/^(views|likes|comments)\b/.test(f))
   .join(",");
 
 const MAX_DURATION_SEC = 90;
@@ -58,6 +65,8 @@ export type GraphVideo = {
   thumbnails?: { data?: GraphThumb[] };
   format?: GraphFormat[];
   views?: number;
+  likes?: { summary?: { total_count?: number } };
+  comments?: { summary?: { total_count?: number } };
 };
 type GraphResponse = { data?: GraphVideo[]; error?: { message?: string; type?: string; code?: number } };
 
@@ -123,6 +132,8 @@ export function toClip(v: GraphVideo, pageId: string): Clip | null {
     embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(permalink)}&show_text=false`,
     permalink,
     views: typeof v.views === "number" ? v.views : undefined,
+    likes: v.likes?.summary?.total_count,
+    comments: v.comments?.summary?.total_count,
   });
 }
 

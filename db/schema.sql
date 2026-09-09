@@ -37,6 +37,8 @@ create table if not exists clips (
 -- Additive, safe to re-run: upgrades an existing database when the create
 -- table above no-ops because the table already exists.
 alter table clips add column if not exists views integer not null default 0;
+alter table clips add column if not exists likes integer not null default 0;
+alter table clips add column if not exists comments integer not null default 0;
 
 -- Hot read path 1: newest-first listing (home, /videos, sitemap).
 -- Also the index the Google News sitemap's 48h window rides:
@@ -126,6 +128,8 @@ select
   -- the real dateModified: an n8n article_th landing IS a body change, but it
   -- never touches clips.updated_at (archive() writes the raw Facebook caption).
   -- Aliased because c.updated_at already owns the bare name.
-  s.updated_at as script_updated_at
+  s.updated_at as script_updated_at,
+  c.likes,
+  c.comments
 from clips c
 left join clip_scripts s on s.video_id = c.id;

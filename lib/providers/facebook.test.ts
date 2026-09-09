@@ -34,6 +34,8 @@ function main() {
   // a stray comma, whatever position `views` was in.
   const fields = FIELDS_WITHOUT_VIEWS.split(",");
   assert.ok(!fields.includes("views"), "views is gone");
+assert.ok(!fields.includes("likes"), "likes is gone");
+assert.ok(!fields.includes("comments"), "comments is gone");
   assert.ok(fields.includes("id") && fields.includes("length"), "everything else survives");
   assert.ok(
     fields.every((f) => f.length > 0),
@@ -52,6 +54,8 @@ function main() {
     length: 45,
     format: GRAPH,
     views: 7,
+    likes: { summary: { total_count: 4 } },
+    comments: { summary: { total_count: 2 } },
   };
   const clip = toClip(video, "page");
   assert.ok(clip, "reel-length video with a still maps to a clip");
@@ -61,6 +65,9 @@ function main() {
   assert.equal(clip.permalink, "https://www.facebook.com/reel/123456789");
   assert.equal(clip.publishedAt, "2026-09-08T01:00:00.000Z");
   assert.equal(clip.views, 7);
+  assert.equal(clip.likes, 4);
+  assert.equal(clip.comments, 2);
+  assert.equal(toClip({ ...video, likes: undefined }, "page")?.likes, undefined, "no summary → no count");
   assert.equal(toClip({ ...video, length: 120 }, "page"), null, "over MAX_DURATION_SEC is dropped");
   assert.equal(toClip({ ...video, format: undefined }, "page"), null, "no still is dropped");
 
