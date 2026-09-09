@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Clip } from "@/lib/types";
-import { formatTimecode } from "./format";
+import { formatRelative, formatTimecode } from "./format";
 
 /** The top strip: latest headlines, horizontal scroll-snap. CSS only — no JS marquee, no autoplay. */
 export function Ticker({ clips }: { clips: Clip[] }) {
@@ -9,7 +9,14 @@ export function Ticker({ clips }: { clips: Clip[] }) {
   return (
     <nav aria-label="ข่าวล่าสุด" className="border-b border-hairline bg-surface">
       <div className="container-hot flex items-center gap-4 py-2.5">
-        <span className="kicker shrink-0 whitespace-nowrap">อัปเดตล่าสุด</span>
+        {/* Freshness signal: the newest clip's publish time, not the render
+            time — an ISR page rendered an hour ago must not claim "just now". */}
+        <span className="kicker flex shrink-0 flex-col whitespace-nowrap sm:flex-row sm:gap-1.5">
+          อัปเดตล่าสุด
+          <time dateTime={clips[0].publishedAt} className="text-hot">
+            {formatRelative(clips[0].publishedAt)}
+          </time>
+        </span>
         <ul className="flex min-w-0 flex-1 snap-x snap-mandatory gap-6 overflow-x-auto">
           {clips.map((clip) => (
             <li key={clip.id} className="shrink-0 snap-start">

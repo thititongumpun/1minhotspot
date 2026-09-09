@@ -1,16 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-
-/** Primary menu: home + the five categories + all videos. Shared with the footer. */
-export const NAV = [
-  { href: "/", label: "หน้าแรก" },
-  { href: "/category/society", label: "ข่าวสังคม" },
-  { href: "/category/entertainment", label: "บันเทิง" },
-  { href: "/category/politics", label: "การเมือง" },
-  { href: "/category/viral", label: "ไวรัล" },
-  { href: "/category/economy", label: "เศรษฐกิจ" },
-  { href: "/videos", label: "คลิปทั้งหมด" },
-] as const;
+import { MobileNav } from "./mobile-nav";
+import { NAV } from "./nav";
 
 export function SiteHeader() {
   return (
@@ -69,33 +60,7 @@ export function SiteHeader() {
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-3 lg:ml-0">
-          {/* Mobile disclosure — native <details>, so it is keyboard-operable
-              with no JS. Panel is absolute against the sticky header. */}
-          <details className="lg:hidden">
-            <summary className="flex h-11 w-11 list-none flex-col items-center justify-center gap-[5px] [&::-webkit-details-marker]:hidden">
-              <span className="sr-only">เมนู</span>
-              <span aria-hidden className="block h-px w-5 bg-fg" />
-              <span aria-hidden className="block h-px w-5 bg-fg" />
-              <span aria-hidden className="block h-px w-5 bg-fg" />
-            </summary>
-            <nav
-              aria-label="เมนู"
-              className="absolute inset-x-0 top-full border-b border-hairline bg-ink"
-            >
-              <ul className="container-hot py-2">
-                {NAV.map(({ href, label }) => (
-                  <li key={href} className="border-t border-hairline first:border-t-0">
-                    <Link
-                      href={href}
-                      className="block py-3 text-[15px] whitespace-nowrap text-fg"
-                    >
-                      {label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          </details>
+          <MobileNav />
         </div>
       </div>
     </header>

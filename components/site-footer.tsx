@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { NAV } from "./site-header";
+import { NAV } from "./nav";
 
 // Plain text links, no icon library. Only the two channels we actually
 // publish to — do not invent counts, badges, or extra platforms.
