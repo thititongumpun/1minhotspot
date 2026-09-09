@@ -100,7 +100,7 @@ export function pickFormat(
 /** One Graph video → Clip, or null when it is not reel-length or has no usable still.
  *  Shared by the feed and the by-id fetch, so both write the same slug/row.
  *  Exported for facebook.test.ts. */
-export function toClip(v: GraphVideo, pageId: string): Clip | null {
+export function toClip(v: GraphVideo, pageId: string, now: () => string = () => new Date().toISOString()): Clip | null {
   if (!(typeof v.length === "number" && v.length > 0 && v.length <= MAX_DURATION_SEC)) return null;
   const permalink = absolute(v.permalink_url ?? `/${pageId}/videos/${v.id}`);
   const thumb = (v.thumbnails?.data ?? [])
@@ -119,7 +119,12 @@ export function toClip(v: GraphVideo, pageId: string): Clip | null {
   // which is invalid and gets the NewsArticle rich result dropped by
   // Google. We never invent an image URL that might not resolve.
   if (!thumbnail) return null;
-  const publishedAt = toIso(v.created_time, new Date(0).toISOString());
+  // `publishedAt` is when THIS SITE first put the summary up, not Graph's
+  // `created_time` — that's the original video's date, which can predate our
+  // own launch (reposts, evergreen reels) and reads as backdating once shown
+  // as our own "published on" date. store.upsertClip never overwrites it, so
+  // whatever we stamp here on first ingest is permanent.
+  const publishedAt = now();
   return buildClip({
     id: v.id,
     source: "facebook",

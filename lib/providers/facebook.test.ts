@@ -57,13 +57,18 @@ assert.ok(!fields.includes("comments"), "comments is gone");
     likes: { summary: { total_count: 4 } },
     comments: { summary: { total_count: 2 } },
   };
-  const clip = toClip(video, "page");
+  const FIXED_NOW = "2026-09-09T12:00:00.000Z";
+  const clip = toClip(video, "page", () => FIXED_NOW);
   assert.ok(clip, "reel-length video with a still maps to a clip");
   assert.equal(clip.id, "123456789");
   assert.equal(clip.slug, toClip({ ...video }, "page")?.slug, "deterministic slug");
   assert.equal(clip.thumbnail.width, 720, "uses pickFormat");
   assert.equal(clip.permalink, "https://www.facebook.com/reel/123456789");
-  assert.equal(clip.publishedAt, "2026-09-08T01:00:00.000Z");
+  // publishedAt is OUR ingest time, not Graph's created_time (2026-09-08) —
+  // showing the source's original date as our own "published on" date reads
+  // as backdating once the source video predates this site's launch.
+  assert.equal(clip.publishedAt, FIXED_NOW, "publishedAt is our ingest clock, not Facebook's created_time");
+  assert.notEqual(clip.publishedAt, video.created_time, "never passes through the source's own date");
   assert.equal(clip.views, 7);
   assert.equal(clip.likes, 4);
   assert.equal(clip.comments, 2);

@@ -71,14 +71,17 @@ export async function fetchYouTubeClips(): Promise<Clip[]> {
     .map((v) => ({ v, durationSec: parseIsoDuration(v.contentDetails?.duration ?? "") }))
     .filter(({ durationSec }) => durationSec > 0 && durationSec <= MAX_DURATION_SEC)
     .map(({ v, durationSec }) =>
-      // `snippet.publishedAt` is already RFC 3339 with a `Z`/`+hh:mm` offset —
-      // valid extended ISO-8601 as-is, unlike Facebook's `created_time`.
+      // `publishedAt` is when THIS SITE first put the summary up, not
+      // `snippet.publishedAt` (the video's real upload date on YouTube) —
+      // same reasoning as facebook.ts's toClip: the source date can predate
+      // our own launch and reads as backdating once shown as our "published
+      // on" date. store.upsertClip never overwrites it after first ingest.
       buildClip({
         id: v.id,
         source: "youtube",
         title: v.snippet?.title ?? "",
         description: v.snippet?.description ?? "",
-        publishedAt: v.snippet?.publishedAt ?? new Date(0).toISOString(),
+        publishedAt: new Date().toISOString(),
         durationSec,
         thumbnail: bestThumb(v.snippet?.thumbnails),
         embedUrl: `https://www.youtube.com/embed/${v.id}`,
