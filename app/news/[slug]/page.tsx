@@ -18,8 +18,6 @@ import { formatCount, formatDate, formatTimecode, formatViews, railFill } from "
 import { JsonLd } from "@/components/json-ld";
 import { SectionHead } from "@/components/section-head";
 
-export const revalidate = 3600;
-
 /**
  * Prerender only the recent window. The store accumulates clips forever, so
  * prerendering all of them would make build time grow without bound. Older

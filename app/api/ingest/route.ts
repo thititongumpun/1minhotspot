@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
-import { upsertScript, type ScriptInput } from "@/lib/store";
+import { revalidatePath } from "next/cache";
+import { getStoredSlugById, upsertScript, type ScriptInput } from "@/lib/store";
 
 // Caching: nothing to opt out of. Next 16 does not cache Route Handlers by
 // default, and only `GET` can ever opt in — see
@@ -99,5 +100,12 @@ export async function POST(request: Request): Promise<Response> {
   if (!(await upsertScript(input))) {
     return fail(503, "store unavailable — script was not persisted, retry");
   }
+
+  // Revalidate the article page on-demand instead of relying on the hourly
+  // ISR sweep. No slug yet means the clip hasn't been archived — nothing
+  // cached to invalidate.
+  const slug = await getStoredSlugById(videoId);
+  if (slug) revalidatePath(`/news/${slug}`);
+
   return json({ ok: true, videoId }, 200);
 }
