@@ -4,6 +4,7 @@ allowBuilds:
   esbuild: true
   sharp: true
   unrs-resolver: false
+  workerd: false
 minimumReleaseAgeExclude:
   - '@next/env@16.3.2'
   - '@next/eslint-plugin-next@16.3.2'
