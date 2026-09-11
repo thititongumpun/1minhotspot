@@ -126,8 +126,6 @@ export default async function ArticlePage({ params }: PageProps<"/news/[slug]">)
             <time dateTime={clip.publishedAt}>เผยแพร่เมื่อ {formatDate(clip.publishedAt)}</time>
             <span aria-hidden>·</span>
             <span>ความยาว {formatTimecode(clip.durationSec)}</span>
-            <span aria-hidden>·</span>
-            <ShareButton title={clip.title} url={absoluteUrl(`/news/${clip.slug}`)} />
           </p>
           {/* Facebook engagement, refreshed with the hourly feed. Each count is
               independent: undefined means never counted, so it is simply absent. */}
@@ -147,6 +145,9 @@ export default async function ArticlePage({ params }: PageProps<"/news/[slug]">)
                 ))}
             </p>
           )}
+          <div className="mt-5">
+            <ShareButton title={clip.title} url={absoluteUrl(`/news/${clip.slug}`)} />
+          </div>
           <span
             aria-hidden
             className="hot-rail mt-3"
@@ -191,6 +192,10 @@ export default async function ArticlePage({ params }: PageProps<"/news/[slug]">)
                 {paragraph}
               </p>
             ))}
+
+            <div className="pt-2">
+              <ShareButton title={clip.title} url={absoluteUrl(`/news/${clip.slug}`)} />
+            </div>
 
             {/*
               Quoted, never republished: the publisher's own og:description plus

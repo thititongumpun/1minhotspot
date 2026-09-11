@@ -3,6 +3,19 @@ import { useEffect, useRef, useState } from "react";
 
 // ponytail: plain share URLs, no SDKs; add share counts only if ever requested.
 
+const PILL =
+  "inline-flex items-center gap-2 rounded-full border border-hot px-4 py-2 text-sm font-medium text-hot transition-colors hover:bg-hot hover:text-ink";
+
+function ShareIcon() {
+  return (
+    <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7" />
+      <path d="M16 6l-4-4-4 4" />
+      <path d="M12 2v13" />
+    </svg>
+  );
+}
+
 /**
  * Server render and first client render both emit the fallback links (same
  * reasoning as relative-time-client.tsx): `canShare` starts false and flips
@@ -46,45 +59,35 @@ export function ShareButton({ title, url }: { title: string; url: string }) {
 
   if (canShare) {
     return (
-      <button type="button" aria-label="แชร์บทความนี้" className="text-hot hover:underline" onClick={share}>
-        {copyState === "idle" ? "แชร์" : copyLabel}
+      <button type="button" className={PILL} onClick={share}>
+        <ShareIcon />
+        {copyState === "idle" ? "แชร์ข่าวนี้" : copyLabel}
       </button>
     );
   }
 
+  const encoded = encodeURIComponent(url);
   return (
-    <span className="contents">
-      <a
-        href={`https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(url)}`}
-        target="_blank"
-        rel="noopener"
-        className="text-hot hover:underline"
-      >
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="kicker mr-1">แชร์ข่าวนี้</span>
+      <a href={`https://social-plugins.line.me/lineit/share?url=${encoded}`} target="_blank" rel="noopener" className={PILL}>
         LINE
       </a>
-      <span aria-hidden>·</span>
-      <a
-        href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`}
-        target="_blank"
-        rel="noopener"
-        className="text-hot hover:underline"
-      >
+      <a href={`https://www.facebook.com/sharer/sharer.php?u=${encoded}`} target="_blank" rel="noopener" className={PILL}>
         Facebook
       </a>
-      <span aria-hidden>·</span>
       <a
-        href={`https://x.com/intent/post?url=${encodeURIComponent(url)}&text=${encodeURIComponent(title)}`}
+        href={`https://x.com/intent/post?url=${encoded}&text=${encodeURIComponent(title)}`}
         target="_blank"
         rel="noopener"
-        className="text-hot hover:underline"
+        className={PILL}
       >
         X
       </a>
-      <span aria-hidden>·</span>
       {/* Instagram has no web share URL, so it is omitted here. */}
-      <button type="button" className="text-hot hover:underline" onClick={copyLink}>
+      <button type="button" className={PILL} onClick={copyLink}>
         {copyLabel}
       </button>
-    </span>
+    </div>
   );
 }
