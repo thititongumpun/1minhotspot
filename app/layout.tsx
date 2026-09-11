@@ -4,9 +4,12 @@ import { siteUrl, SITE_DESCRIPTION } from "@/lib/seo";
 import { fontVars } from "./fonts";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { Analytics } from "@vercel/analytics/next"
-import { SpeedInsights } from "@vercel/speed-insights/next"
 import "./globals.css";
+
+// Cloudflare Web Analytics token, created per-site in the Cloudflare dashboard
+// (Analytics & Logs > Web Analytics). Unset in Vercel/local, so the beacon
+// only renders once this env var is configured for the Workers deployment.
+const CF_BEACON_TOKEN = process.env.NEXT_PUBLIC_CF_BEACON_TOKEN;
 
 export const metadata: Metadata = {
   // Next's production fallback is VERCEL_PROJECT_PRODUCTION_URL (the *.vercel.app
@@ -50,8 +53,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <SiteHeader />
         <main id="content" className="flex-1">
           {children}
-          <Analytics />
-          <SpeedInsights />
         </main>
         {/* AdSense: site verification, Auto ads once approved, and Google's
             consent message (Privacy & messaging) for EEA/UK/CH visitors all
@@ -63,6 +64,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           crossOrigin="anonymous"
           strategy="afterInteractive"
         />
+        {CF_BEACON_TOKEN && (
+          <Script
+            src="https://static.cloudflareinsights.com/beacon.min.js"
+            data-cf-beacon={`{"token": "${CF_BEACON_TOKEN}"}`}
+            strategy="afterInteractive"
+          />
+        )}
         <SiteFooter />
       </body>
     </html>

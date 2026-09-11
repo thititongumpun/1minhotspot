@@ -109,7 +109,12 @@ export function smallThumbUrl(url: string): string {
  */
 export async function putSmallThumb(id: string, source: ArrayBuffer): Promise<void> {
   // Only the ingest path needs the native libvips binding; card rendering must not load it.
-  const sharp = (await import("sharp")).default;
+  // Specifier kept out of a string literal so esbuild (OpenNext's Cloudflare build) can't
+  // statically resolve and inline sharp's native .node binaries into the Workers bundle —
+  // it leaves this as a real runtime import instead, which fails fast on Workers (no native
+  // modules there) and is caught by this function's caller, same as any other ingest failure.
+  const sharpPackageName = "sharp";
+  const sharp = (await import(sharpPackageName)).default;
   const webp = await sharp(Buffer.from(source))
     .resize({ width: SMALL_WIDTH, withoutEnlargement: true })
     .webp({ quality: 72 })

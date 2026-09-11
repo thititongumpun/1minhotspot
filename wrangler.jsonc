@@ -11,6 +11,15 @@
 		"directory": ".open-next/assets",
 		"binding": "ASSETS"
 	},
+	"r2_buckets": [
+		{
+			// ISR page cache store (see open-next.config.ts). Create this bucket in
+			// the Cloudflare dashboard or via `wrangler r2 bucket create` before
+			// deploying — it does not exist yet.
+			"binding": "NEXT_INC_CACHE_R2_BUCKET",
+			"bucket_name": "1minhotspot-isr-cache"
+		}
+	],
 	"services": [
 		{
 			// Self-reference service binding, the service name must match the worker name

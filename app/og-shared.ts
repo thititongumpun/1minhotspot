@@ -1,6 +1,4 @@
-import { readFile } from "node:fs/promises";
-import { createRequire } from "node:module";
-import path from "node:path";
+import { OG_FALLBACK_FONT_BASE64 } from "./og-fallback-font";
 
 // Shared by the opengraph-image.tsx routes only. Not a page/route segment itself.
 
@@ -18,18 +16,16 @@ export const OG_COLORS = {
 } as const;
 
 /**
- * Latin-only face that ships inside next/og. Used only when Google Fonts is
- * unreachable: an OG image with Latin fallback type beats a broken route, and
- * beats an unhandled rejection taking the whole server down at module load.
+ * Latin-only face bundled at build time (not read from the filesystem, so this
+ * works on runtimes with no fs access, e.g. Cloudflare Workers). Used only when
+ * Google Fonts is unreachable: an OG image with Latin fallback type beats a
+ * broken route, and beats an unhandled rejection taking the whole server down.
  */
-async function latinFallbackFont(): Promise<ArrayBuffer> {
-  try {
-    const nextRoot = path.dirname(createRequire(import.meta.url).resolve("next/package.json"));
-    const buf = await readFile(path.join(nextRoot, "dist/compiled/@vercel/og/Geist-Regular.ttf"));
-    return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
-  } catch {
-    return new ArrayBuffer(0);
-  }
+function latinFallbackFont(): ArrayBuffer {
+  const binary = atob(OG_FALLBACK_FONT_BASE64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
 }
 
 /**
