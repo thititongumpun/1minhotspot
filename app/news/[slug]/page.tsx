@@ -17,6 +17,7 @@ import { ClipEmbed } from "@/components/clip-embed";
 import { formatCount, formatDate, formatTimecode, formatViews, railFill } from "@/components/format";
 import { JsonLd } from "@/components/json-ld";
 import { SectionHead } from "@/components/section-head";
+import { ShareButton } from "@/components/share-button";
 
 /**
  * Prerender only the recent window. The store accumulates clips forever, so
@@ -125,6 +126,8 @@ export default async function ArticlePage({ params }: PageProps<"/news/[slug]">)
             <time dateTime={clip.publishedAt}>เผยแพร่เมื่อ {formatDate(clip.publishedAt)}</time>
             <span aria-hidden>·</span>
             <span>ความยาว {formatTimecode(clip.durationSec)}</span>
+            <span aria-hidden>·</span>
+            <ShareButton title={clip.title} url={absoluteUrl(`/news/${clip.slug}`)} />
           </p>
           {/* Facebook engagement, refreshed with the hourly feed. Each count is
               independent: undefined means never counted, so it is simply absent. */}

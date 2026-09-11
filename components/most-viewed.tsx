@@ -39,7 +39,7 @@ export function MostViewed({ clips }: { clips: Clip[] }) {
             <div className="min-w-0">
               <Image
                 src={lead.thumbnail.url}
-                alt=""
+                alt={lead.title}
                 width={640}
                 height={360}
                 // The lead sits in a half-width track at 1240px (~580px), and

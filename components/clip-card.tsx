@@ -16,7 +16,7 @@ export function ClipCard({ clip, eager }: { clip: Clip; eager?: boolean }) {
           the LARGE url: Discover ranks on it and it must stay >=1200px. */}
       <Image
         src={smallThumbUrl(clip.thumbnail.url)}
-        alt=""
+        alt={clip.title}
         width={640}
         height={360}
         loading={eager ? "eager" : "lazy"}

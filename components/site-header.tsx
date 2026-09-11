@@ -19,7 +19,7 @@ export function SiteHeader() {
         >
           <Image
             src="/logo.png"
-            alt=""
+            alt="สรุปข่าวร้อนใน 1 นาที"
             width={512}
             height={512}
             // Without sizes, next/image fetches a 640px render for a 36px slot.

@@ -19,7 +19,7 @@ export function RundownRow({ clip, index }: { clip: Clip; index: number }) {
         </span>
         <Image
           src={smallThumbUrl(clip.thumbnail.url)}
-          alt=""
+          alt={clip.title}
           width={96}
           height={54}
           sizes="96px"

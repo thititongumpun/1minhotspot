@@ -20,7 +20,7 @@ export function LeadStory({
       {/* The lead is the hero/LCP and renders wider than 640px, so it keeps the large object; only cards use the 640px sibling. */}
       <Image
         src={clip.thumbnail.url}
-        alt=""
+        alt={clip.title}
         width={1280}
         height={720}
         // Next 16 deprecated `priority`: it only preloads now and leaves the
@@ -28,7 +28,8 @@ export function LeadStory({
         loading="eager"
         fetchPriority="high"
         sizes="(min-width: 1024px) 60vw, 100vw"
-        className="aspect-video w-full bg-surface object-cover"
+        // ponytail: 4:5 on phones so a four-line Thai headline fits inside the overlay; the still is 1080x1920 so the portrait crop shows more image, not less.
+        className="aspect-[4/5] w-full bg-surface object-cover sm:aspect-video"
       />
       <div
         aria-hidden
