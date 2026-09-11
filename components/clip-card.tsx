@@ -2,7 +2,8 @@ import type { CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { categoryLabel, type Clip } from "@/lib/types";
-import { formatRelative, formatTimecode, railFill } from "./format";
+import { formatTimecode, railFill } from "./format";
+import { RelativeTime } from "./relative-time";
 import { smallThumbUrl } from "@/lib/thumb-blob";
 
 /** The reusable photo-led card used by every grid on the site. */
@@ -31,7 +32,7 @@ export function ClipCard({ clip, eager }: { clip: Clip; eager?: boolean }) {
       <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <span className="kicker">{categoryLabel(clip.category)}</span>
         <span className="timecode flex items-center gap-1.5 whitespace-nowrap">
-          <time dateTime={clip.publishedAt}>{formatRelative(clip.publishedAt)}</time>
+          <RelativeTime iso={clip.publishedAt} />
           <span aria-hidden>·</span>
           {formatTimecode(clip.durationSec)}
         </span>

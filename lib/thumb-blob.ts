@@ -108,18 +108,51 @@ export function smallThumbUrl(url: string): string {
  * upscaling invents no detail (same reasoning as fetchLargestStill's note).
  */
 export async function putSmallThumb(id: string, source: ArrayBuffer): Promise<void> {
-  // Only the ingest path needs the native libvips binding; card rendering must not load it.
+  await putObject(`thumbs/${id}-${SMALL_WIDTH}.webp`, await resizeToWebp(source), "image/webp");
+}
+
+/**
+ * On Workers the deploy strips sharp's native libvips (see commit 3e21c12), so
+ * resize through the Images binding wired in wrangler.jsonc. Everywhere else
+ * (scripts/small-thumbs.ts, next dev) that binding is absent and sharp runs.
+ */
+async function resizeToWebp(source: ArrayBuffer): Promise<ArrayBuffer | Buffer> {
+  const images = await workersImages();
+  if (images) {
+    const out = await images
+      .input(new Blob([source]).stream())
+      .transform({ width: SMALL_WIDTH, fit: "scale-down" })
+      .output({ format: "image/webp", quality: 72 });
+    return out.response().arrayBuffer();
+  }
   // Specifier kept out of a string literal so esbuild (OpenNext's Cloudflare build) can't
-  // statically resolve and inline sharp's native .node binaries into the Workers bundle —
-  // it leaves this as a real runtime import instead, which fails fast on Workers (no native
-  // modules there) and is caught by this function's caller, same as any other ingest failure.
+  // statically resolve and inline sharp's native .node binaries into the Workers bundle.
   const sharpPackageName = "sharp";
   const sharp = (await import(sharpPackageName)).default;
-  const webp = await sharp(Buffer.from(source))
+  return sharp(Buffer.from(source))
     .resize({ width: SMALL_WIDTH, withoutEnlargement: true })
     .webp({ quality: 72 })
     .toBuffer();
-  await putObject(`thumbs/${id}-${SMALL_WIDTH}.webp`, webp, "image/webp");
+}
+
+// Just the slice of Cloudflare's ImagesBinding used above. `wrangler types` would generate the
+// real one, but its global Workers runtime types collide with @types/node across the repo.
+type ImagesBinding = {
+  input(stream: ReadableStream<Uint8Array>): {
+    transform(options: { width: number; fit: "scale-down" }): {
+      output(options: { format: "image/webp"; quality: number }): Promise<{ response(): Response }>;
+    };
+  };
+};
+
+/** The Images binding when running inside the Worker, else null. */
+async function workersImages(): Promise<ImagesBinding | null> {
+  try {
+    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+    return (getCloudflareContext().env as { IMAGES?: ImagesBinding }).IMAGES ?? null;
+  } catch {
+    return null; // not on Workers (tsx script, plain next build)
+  }
 }
 
 /** Only the retired host — what the backfill's --force re-uploads. */

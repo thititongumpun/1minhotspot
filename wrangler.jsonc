@@ -1,36 +1,54 @@
 {
-	"$schema": "node_modules/wrangler/config-schema.json",
-	"main": ".open-next/worker.js",
-	"name": "1minhotspot",
-	"compatibility_date": "2026-09-10",
-	"compatibility_flags": [
-		"nodejs_compat",
-		"global_fetch_strictly_public"
-	],
-	"assets": {
-		"directory": ".open-next/assets",
-		"binding": "ASSETS"
-	},
-	"r2_buckets": [
-		{
-			// ISR page cache store (see open-next.config.ts). Create this bucket in
-			// the Cloudflare dashboard or via `wrangler r2 bucket create` before
-			// deploying — it does not exist yet.
-			"binding": "NEXT_INC_CACHE_R2_BUCKET",
-			"bucket_name": "1minhotspot-isr-cache"
-		}
-	],
-	"services": [
-		{
-			// Self-reference service binding, the service name must match the worker name
-			// see https://opennext.js.org/cloudflare/caching
-			"binding": "WORKER_SELF_REFERENCE",
-			"service": "1minhotspot"
-		}
-	],
-	"images": {
-		// Enable image optimization
-		// see https://opennext.js.org/cloudflare/howtos/image
-		"binding": "IMAGES"
-	}
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+  "name": "1minhotspot",
+  "compatibility_date": "2026-09-10",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS",
+  },
+  "workers_dev": true,
+  "routes": [
+    { "pattern": "www.1minhotspot.com", "custom_domain": true },
+    { "pattern": "1minhotspot.com", "custom_domain": true },
+  ],
+  "vars": {
+    "NEXT_PUBLIC_SITE_URL": "https://www.1minhotspot.com",
+  },
+  "durable_objects": {
+    "bindings": [
+      // ISR revalidation queue (see open-next.config.ts)
+      { "name": "NEXT_CACHE_DO_QUEUE", "class_name": "DOQueueHandler" },
+    ],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DOQueueHandler"] }],
+  "r2_buckets": [
+    {
+      // ISR page cache store (see open-next.config.ts). Create this bucket in
+      // the Cloudflare dashboard or via `wrangler r2 bucket create` before
+      // deploying — it does not exist yet.
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "1minhotspot-isr-cache",
+    },
+  ],
+  "services": [
+    {
+      // Self-reference service binding, the service name must match the worker name
+      // see https://opennext.js.org/cloudflare/caching
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "1minhotspot",
+    },
+  ],
+  "images": {
+    // Enable image optimization
+    // see https://opennext.js.org/cloudflare/howtos/image
+    "binding": "IMAGES",
+  },
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true,
+    },
+  },
 }

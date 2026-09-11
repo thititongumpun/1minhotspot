@@ -2,7 +2,8 @@ import type { CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { Clip } from "@/lib/types";
-import { formatRelative, formatTimecode, railFill } from "./format";
+import { formatTimecode, railFill } from "./format";
+import { RelativeTime } from "./relative-time";
 import { smallThumbUrl } from "@/lib/thumb-blob";
 
 /**
@@ -28,9 +29,7 @@ export function RundownRow({ clip, index }: { clip: Clip; index: number }) {
           {clip.title}
         </span>
         <span className="timecode shrink-0 whitespace-nowrap">
-          <time dateTime={clip.publishedAt} className="hidden sm:inline">
-            {formatRelative(clip.publishedAt)}
-          </time>
+          <RelativeTime iso={clip.publishedAt} className="hidden sm:inline" />
           <span aria-hidden className="hidden sm:inline"> · </span>
           {formatTimecode(clip.durationSec)}
         </span>
