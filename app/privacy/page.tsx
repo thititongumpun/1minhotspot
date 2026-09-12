@@ -61,8 +61,8 @@ export default function PrivacyPage() {
           <section>
             <h2 className="font-display text-xl font-bold text-fg">การวิเคราะห์การใช้งาน</h2>
             <p className="mt-3">
-              เว็บไซต์ใช้ Vercel Analytics และ Vercel Speed Insights เพื่อเก็บสถิติการเข้าชมและความเร็วในการโหลดหน้าเว็บ
-              โดยข้อมูลที่เก็บเป็นสถิติรวมแบบไม่ระบุตัวตน
+              เว็บไซต์ใช้ Cloudflare Web Analytics เพื่อเก็บสถิติการเข้าชมและความเร็วในการโหลดหน้าเว็บ
+              โดยข้อมูลที่เก็บเป็นสถิติรวมแบบไม่ระบุตัวตนและไม่ใช้คุกกี้ในการติดตาม
             </p>
           </section>
 
@@ -87,7 +87,7 @@ export default function PrivacyPage() {
           </section>
 
           <p className="timecode">
-            ปรับปรุงล่าสุด <time dateTime="2026-09-07">7 กันยายน 2569</time>
+            ปรับปรุงล่าสุด <time dateTime="2026-09-13">13 กันยายน 2569</time>
           </p>
         </div>
       </div>
