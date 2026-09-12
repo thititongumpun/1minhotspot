@@ -28,6 +28,10 @@ const CSP_REPORT_ONLY = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  // Home is the "what's new" surface: a tap on หน้าแรก must fetch fresh, not
+  // reuse the 5-minute client prefetch; 30s is the schema floor. Back/forward stays cached (Next ignores
+  // staleTimes there on purpose, to keep scroll position).
+  experimental: { staleTimes: { static: 30 } },
   images: {
     unoptimized: true,
     remotePatterns: [
