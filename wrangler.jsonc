@@ -23,6 +23,18 @@
     ],
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DOQueueHandler"] }],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "1minhotspot",
+      "database_id": "c79accb9-c584-4e24-8eea-a11fc2bb8111",
+      "migrations_dir": "db/migrations",
+      // next build prerenders 200 article pages through getCloudflareContext({async:true}),
+      // which goes through wrangler's platform proxy. remote:true makes that proxy hit the
+      // real D1 instead of an empty local miniflare file.
+      "remote": true,
+    },
+  ],
   "r2_buckets": [
     {
       // ISR page cache store (see open-next.config.ts). Create this bucket in

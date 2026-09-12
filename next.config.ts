@@ -31,7 +31,15 @@ const nextConfig: NextConfig = {
   // Home is the "what's new" surface: a tap on หน้าแรก must fetch fresh, not
   // reuse the 5-minute client prefetch; 30s is the schema floor. Back/forward stays cached (Next ignores
   // staleTimes there on purpose, to keep scroll position).
-  experimental: { staleTimes: { static: 30 } },
+  experimental: {
+    staleTimes: { static: 30 },
+    // Every prerender worker boots its own wrangler platform proxy to reach the
+    // D1 binding (lib/db.ts). At the default one-worker-per-core that is 21
+    // miniflare instances and the build is OOM-killed (exit 137) before the
+    // store can answer, so article pages silently prerender without their
+    // archive rows. Four keeps it under 2 GB.
+    cpus: 4,
+  },
   images: {
     unoptimized: true,
     remotePatterns: [

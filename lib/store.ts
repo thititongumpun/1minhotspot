@@ -1,4 +1,4 @@
-import { getDb, type Sql } from "./db";
+import { getDb, type D1 } from "./db";
 import type { CategorySlug, Clip } from "./types";
 
 /** What n8n POSTs after it publishes a reel. Keyed by the Facebook video id. */
@@ -13,9 +13,43 @@ export type ScriptInput = {
 
 const DEFAULT_LIMIT = 500;
 
-/** timestamptz comes back as a Date from the driver; be tolerant of a string. */
+/** Timestamps are stored as UTC ISO text; stay tolerant of a Date anyway. */
 const iso = (v: unknown): string =>
   v instanceof Date ? v.toISOString() : new Date(String(v)).toISOString();
+
+/** `tags` is a JSON array in a text column; anything else (null, bad import) → []. */
+const tagsOf = (v: unknown): string[] => {
+  try {
+    const parsed = typeof v === "string" ? JSON.parse(v) : v;
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+};
+
+/** Bangkok Y/M via Intl, same pattern as components/format.ts `formatDate` — the
+ *  host may run in UTC (or anywhere), so the month boundary can't be derived
+ *  from the host's own local clock. */
+export const bangkokYearMonth = (d: Date): { year: string; month: string } => {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(d);
+  const year = parts.find((p) => p.type === "year")?.value ?? "1970";
+  const month = parts.find((p) => p.type === "month")?.value ?? "01";
+  return { year, month };
+};
+
+/**
+ * First instant of the current Bangkok calendar month as a UTC ISO string —
+ * the same shape as every stored `published_at`, so `>=` compares correctly in
+ * SQL. Bangkok is a fixed UTC+7 with no DST, so the literal offset is exact.
+ */
+export const bangkokMonthStartIso = (now: Date): string => {
+  const { year, month } = bangkokYearMonth(now);
+  return new Date(`${year}-${month}-01T00:00:00+07:00`).toISOString();
+};
 
 /**
  * DB row → the existing `Clip` type. No parallel type: whatever comes out of
@@ -52,12 +86,9 @@ const toClip = (r: Record<string, unknown>): Clip => ({
   publishedAt: iso(r.published_at),
   // max(clip, script): the clip row moves when Facebook edits the video, the
   // script row moves when n8n rewrites the body. Both are real modifications.
-  // `script_updated_at` is undefined until db/schema.sql has been re-applied —
-  // getStoredClipBySlug does `select *`, so the article page (the only place
-  // dateModified is emitted) picks it up the moment the view is migrated, and
-  // reads the clip timestamp alone until then. The two list projections are
-  // deliberately NOT widened: naming a column the deployed view lacks would
-  // make every list query throw, and run()'s fallback would blank the site.
+  // `script_updated_at` only arrives via getStoredClipBySlug's `select *` —
+  // the article page is the one place dateModified is emitted. LIST_COLUMNS is
+  // deliberately not widened: list rows read the clip timestamp alone.
   updatedAt: iso(
     r.script_updated_at && Date.parse(iso(r.script_updated_at)) > Date.parse(iso(r.updated_at))
       ? r.script_updated_at
@@ -71,7 +102,7 @@ const toClip = (r: Record<string, unknown>): Clip => ({
   },
   embedUrl: String(r.embed_url),
   permalink: String(r.permalink),
-  tags: Array.isArray(r.tags) ? (r.tags as string[]) : [],
+  tags: tagsOf(r.tags),
   // 0 and "no count" are different facts (see Clip.views) — only surface a
   // real, positive count, never a fabricated 0 for a clip that never had one.
   views: Number(r.views) > 0 ? Number(r.views) : undefined,
@@ -82,18 +113,19 @@ const toClip = (r: Record<string, unknown>): Clip => ({
 });
 
 /**
- * Never-throw wrapper, matching the discipline in lib/clips.ts: with no
- * DATABASE_URL, or on any query failure, log and return the fallback. The site
- * must build and serve from the live Facebook feed with no database at all.
+ * Never-throw wrapper, matching the discipline in lib/clips.ts: with no `DB`
+ * binding (tsx script, plain next build), or on any query failure, log and
+ * return the fallback. The site must build and serve from the live Facebook
+ * feed with no database at all.
  */
-async function run<T>(label: string, fallback: T, fn: (sql: Sql) => Promise<T>): Promise<T> {
-  const sql = getDb();
-  if (!sql) {
-    console.warn(`[store] ${label}: DATABASE_URL unset — skipping.`);
+async function run<T>(label: string, fallback: T, fn: (db: D1) => Promise<T>): Promise<T> {
+  const db = await getDb();
+  if (!db) {
+    console.warn(`[store] ${label}: no DB binding — skipping.`);
     return fallback;
   }
   try {
-    return await fn(sql);
+    return await fn(db);
   } catch (err) {
     console.warn(`[store] ${label} failed:`, (err as Error).message);
     return fallback;
@@ -106,56 +138,61 @@ async function run<T>(label: string, fallback: T, fn: (sql: Sql) => Promise<T>):
  * is the truth. The Thai rewrite lives in clip_scripts and is untouched here.
  */
 export async function upsertClip(clip: Clip): Promise<boolean> {
-  return run(`upsertClip(${clip.slug})`, false, async (sql) => {
-    await sql`
-      insert into clips (
-        slug, id, source, title, summary, body, category,
-        published_at, updated_at, duration_sec,
-        thumbnail_url, thumbnail_width, thumbnail_height,
-        embed_url, permalink, tags, views, likes, comments
-      ) values (
-        ${clip.slug}, ${clip.id}, ${clip.source}, ${clip.title}, ${clip.summary},
-        ${clip.body}, ${clip.category},
-        ${clip.publishedAt}, ${clip.updatedAt}, ${clip.durationSec},
-        ${clip.thumbnail.url}, ${clip.thumbnail.width}, ${clip.thumbnail.height},
-        ${clip.embedUrl}, ${clip.permalink}, ${clip.tags}::text[], ${clip.views ?? 0},
-        ${clip.likes ?? 0}, ${clip.comments ?? 0}
+  return run(`upsertClip(${clip.slug})`, false, async (db) => {
+    await db
+      .prepare(
+        `insert into clips (
+          slug, id, source, title, summary, body, category,
+          published_at, updated_at, duration_sec,
+          thumbnail_url, thumbnail_width, thumbnail_height,
+          embed_url, permalink, tags, views, likes, comments
+        ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        on conflict (slug) do update set
+          id               = excluded.id,
+          source           = excluded.source,
+          title            = excluded.title,
+          summary          = excluded.summary,
+          body             = excluded.body,
+          category         = excluded.category,
+          -- published_at intentionally absent: the first publish time is the truth.
+          -- Facebook's updated_time bumps on engagement, not edits, so writing it
+          -- through unconditionally churned dateModified hourly on every article.
+          -- SQLite (like Postgres) evaluates every clips.* reference in an ON
+          -- CONFLICT SET against the PRE-update row regardless of assignment
+          -- order, so these comparisons are safe even though title/body/summary
+          -- are assigned above. IS NOT is SQLite's null-safe inequality.
+          updated_at       = case
+                               when clips.title   is not excluded.title
+                                 or clips.body    is not excluded.body
+                                 or clips.summary is not excluded.summary
+                               then excluded.updated_at
+                               else clips.updated_at
+                             end,
+          duration_sec     = excluded.duration_sec,
+          thumbnail_url    = excluded.thumbnail_url,
+          thumbnail_width  = excluded.thumbnail_width,
+          thumbnail_height = excluded.thumbnail_height,
+          embed_url        = excluded.embed_url,
+          permalink        = excluded.permalink,
+          tags             = excluded.tags,
+          -- ponytail: views freeze once a clip ages out of the 50-item feed
+          -- window; paginate /videos if that matters. Two-arg max() (scalar in
+          -- SQLite) means a stale refresh (or a clip that has aged out and
+          -- reports 0) can never claw a count back down — the live feed is the
+          -- fresher truth, but only upward.
+          views            = max(clips.views, excluded.views),
+          likes            = max(clips.likes, excluded.likes),
+          comments         = max(clips.comments, excluded.comments)`,
       )
-      on conflict (slug) do update set
-        id               = excluded.id,
-        source           = excluded.source,
-        title            = excluded.title,
-        summary          = excluded.summary,
-        body             = excluded.body,
-        category         = excluded.category,
-        -- published_at intentionally absent: the first publish time is the truth.
-        -- Facebook's updated_time bumps on engagement, not edits, so writing it
-        -- through unconditionally churned dateModified hourly on every article.
-        -- Postgres evaluates every clips.* reference in an ON CONFLICT SET
-        -- against the PRE-update row regardless of assignment order, so these
-        -- comparisons are safe even though title/body/summary are assigned above.
-        updated_at       = case
-                             when clips.title   is distinct from excluded.title
-                               or clips.body    is distinct from excluded.body
-                               or clips.summary is distinct from excluded.summary
-                             then excluded.updated_at
-                             else clips.updated_at
-                           end,
-        duration_sec     = excluded.duration_sec,
-        thumbnail_url    = excluded.thumbnail_url,
-        thumbnail_width  = excluded.thumbnail_width,
-        thumbnail_height = excluded.thumbnail_height,
-        embed_url        = excluded.embed_url,
-        permalink        = excluded.permalink,
-        tags             = excluded.tags,
-        -- ponytail: views freeze once a clip ages out of the 50-item feed
-        -- window; paginate /videos if that matters. GREATEST means a stale
-        -- refresh (or a clip that has aged out and reports 0) can never claw
-        -- a count back down — the live feed is the fresher truth, but only upward.
-        views            = greatest(clips.views, excluded.views),
-        likes            = greatest(clips.likes, excluded.likes),
-        comments         = greatest(clips.comments, excluded.comments)
-    `;
+      .bind(
+        clip.slug, clip.id, clip.source, clip.title, clip.summary,
+        clip.body, clip.category,
+        clip.publishedAt, clip.updatedAt, clip.durationSec,
+        clip.thumbnail.url, clip.thumbnail.width, clip.thumbnail.height,
+        clip.embedUrl, clip.permalink, JSON.stringify(clip.tags), clip.views ?? 0,
+        clip.likes ?? 0, clip.comments ?? 0,
+      )
+      .run();
     return true;
   });
 }
@@ -169,41 +206,46 @@ export async function upsertClip(clip: Clip): Promise<boolean> {
  * Returns false (never throws) so the route can answer 5xx and let n8n retry.
  */
 export async function upsertScript(input: ScriptInput): Promise<boolean> {
-  return run(`upsertScript(${input.videoId})`, false, async (sql) => {
-    await sql`
-      insert into clip_scripts (video_id, script_th, article_th, rewritten_title, source_url, source_publisher)
-      values (
-        ${input.videoId}, ${input.scriptTh ?? null}, ${input.articleTh ?? null},
-        ${input.rewrittenTitle ?? null}, ${input.sourceUrl ?? null}, ${input.sourcePublisher ?? null}
+  return run(`upsertScript(${input.videoId})`, false, async (db) => {
+    await db
+      .prepare(
+        `insert into clip_scripts (video_id, script_th, article_th, rewritten_title, source_url, source_publisher)
+        values (?, ?, ?, ?, ?, ?)
+        on conflict (video_id) do update set
+          script_th        = coalesce(excluded.script_th, clip_scripts.script_th),
+          article_th       = coalesce(excluded.article_th, clip_scripts.article_th),
+          rewritten_title  = coalesce(excluded.rewritten_title, clip_scripts.rewritten_title),
+          source_url       = coalesce(excluded.source_url, clip_scripts.source_url),
+          source_publisher = coalesce(excluded.source_publisher, clip_scripts.source_publisher),
+          updated_at       = strftime('%Y-%m-%dT%H:%M:%fZ','now')`,
       )
-      on conflict (video_id) do update set
-        script_th        = coalesce(excluded.script_th, clip_scripts.script_th),
-        article_th       = coalesce(excluded.article_th, clip_scripts.article_th),
-        rewritten_title  = coalesce(excluded.rewritten_title, clip_scripts.rewritten_title),
-        source_url       = coalesce(excluded.source_url, clip_scripts.source_url),
-        source_publisher = coalesce(excluded.source_publisher, clip_scripts.source_publisher),
-        updated_at       = now()
-    `;
+      .bind(
+        input.videoId, input.scriptTh ?? null, input.articleTh ?? null,
+        input.rewrittenTitle ?? null, input.sourceUrl ?? null, input.sourcePublisher ?? null,
+      )
+      .run();
     return true;
   });
 }
 
-// ponytail: list projection duplicated verbatim in getMostViewed — the neon
-// tagged template can't interpolate an identifier list. Adding a column that a
-// listing renders means adding it to BOTH. Move to a `clips_list` view in
-// db/schema.sql if a third list query ever appears.
+// ponytail: list projection shared by getStoredClips and getMostViewed via this
+// one constant; identifiers can't be bound, so it is spliced into the SQL text.
+// Adding a column that a listing renders means adding it here. Move to a
+// `clips_list` view in db/migrations if a third list query ever appears.
+const LIST_COLUMNS = `
+  slug, id, source, title, category,
+  published_at, updated_at, duration_sec,
+  thumbnail_url, thumbnail_width, thumbnail_height,
+  embed_url, permalink, views, rewritten_title,
+  (coalesce(article_th, '') <> '' or coalesce(script_th, '') <> '') as has_script`;
+
 export async function getStoredClips(limit = DEFAULT_LIMIT): Promise<Clip[]> {
-  return run("getStoredClips", [], async (sql) => {
-    const rows = await sql`
-      select
-        slug, id, source, title, category,
-        published_at, updated_at, duration_sec,
-        thumbnail_url, thumbnail_width, thumbnail_height,
-        embed_url, permalink, views, rewritten_title,
-        (coalesce(article_th, '') <> '' or coalesce(script_th, '') <> '') as has_script
-      from clips_full order by published_at desc limit ${Math.max(0, limit)}
-    `;
-    return rows.map(toClip);
+  return run("getStoredClips", [], async (db) => {
+    const { results } = await db
+      .prepare(`select ${LIST_COLUMNS} from clips_full order by published_at desc limit ?`)
+      .bind(Math.max(0, limit))
+      .all();
+    return results.map(toClip);
   });
 }
 
@@ -226,13 +268,11 @@ export type ClipRef = { slug: string; updatedAt: string };
  * rate. Split into a sitemap index when that gets close.
  */
 export async function getAllClipRefs(): Promise<ClipRef[]> {
-  return run("getAllClipRefs", [], async (sql) => {
-    const rows = await sql`
-      select slug, updated_at from clips
-      where source <> 'sample'
-      order by published_at desc
-    `;
-    return rows.map((r) => ({ slug: String(r.slug), updatedAt: iso(r.updated_at) }));
+  return run("getAllClipRefs", [], async (db) => {
+    const { results } = await db
+      .prepare(`select slug, updated_at from clips where source <> 'sample' order by published_at desc`)
+      .all();
+    return results.map((r) => ({ slug: String(r.slug), updatedAt: iso(r.updated_at) }));
   });
 }
 
@@ -247,13 +287,11 @@ export async function getAllClipRefs(): Promise<ClipRef[]> {
  * uncapped whole-table read.
  */
 export async function getCategoryLastMod(): Promise<Map<CategorySlug, string>> {
-  return run("getCategoryLastMod", new Map<CategorySlug, string>(), async (sql) => {
-    const rows = await sql`
-      select category, max(updated_at) as last_mod
-      from clips where source <> 'sample'
-      group by category
-    `;
-    return new Map(rows.map((r) => [r.category as CategorySlug, iso(r.last_mod)]));
+  return run("getCategoryLastMod", new Map<CategorySlug, string>(), async (db) => {
+    const { results } = await db
+      .prepare(`select category, max(updated_at) as last_mod from clips where source <> 'sample' group by category`)
+      .all();
+    return new Map(results.map((r) => [r.category as CategorySlug, iso(r.last_mod)]));
   });
 }
 
@@ -265,38 +303,32 @@ export async function getCategoryLastMod(): Promise<Map<CategorySlug, string>> {
  * month on, an in-memory "this month" ranking would be structurally blind to
  * most of the month.
  *
- * The double `at time zone` is deliberate and verified against the live DB:
- * the inner one turns `now()` (timestamptz) into Bangkok wall-clock time so
- * date_trunc finds the Bangkok month boundary; the outer one reads that naive
- * timestamp back *as* Bangkok local, yielding the absolute instant
- * 2026-08-01 00:00+07 (= 2026-07-31T17:00Z) that compares against published_at.
- * Independent of the server's TimeZone setting, which on Neon is GMT.
+ * The month boundary is computed in JS (bangkokMonthStartIso) and bound as a
+ * UTC ISO string, the same shape every stored published_at has, so the `>=` is
+ * a plain text compare. Independent of the host clock's zone. `now` is a param
+ * so the boundary math is testable.
  *
  * views > 0 mirrors toClip: 0 means "no count", not "nobody watched".
  */
-export async function getMostViewed(n: number): Promise<Clip[]> {
-  return run("getMostViewed", [], async (sql) => {
-    const rows = await sql`
-      select
-        slug, id, source, title, category,
-        published_at, updated_at, duration_sec,
-        thumbnail_url, thumbnail_width, thumbnail_height,
-        embed_url, permalink, views, rewritten_title,
-        (coalesce(article_th, '') <> '' or coalesce(script_th, '') <> '') as has_script
-      from clips_full
-      where published_at >= date_trunc('month', now() at time zone 'Asia/Bangkok') at time zone 'Asia/Bangkok'
-        and views > 0
-      order by views desc, published_at desc
-      limit ${Math.max(0, n)}
-    `;
-    return rows.map(toClip);
+export async function getMostViewed(n: number, now = new Date()): Promise<Clip[]> {
+  return run("getMostViewed", [], async (db) => {
+    const { results } = await db
+      .prepare(
+        `select ${LIST_COLUMNS} from clips_full
+        where published_at >= ? and views > 0
+        order by views desc, published_at desc
+        limit ?`,
+      )
+      .bind(bangkokMonthStartIso(now), Math.max(0, n))
+      .all();
+    return results.map(toClip);
   });
 }
 
 export async function getStoredClipBySlug(slug: string): Promise<Clip | null> {
-  return run(`getStoredClipBySlug(${slug})`, null, async (sql) => {
-    const rows = await sql`select * from clips_full where slug = ${slug} limit 1`;
-    return rows.length > 0 ? toClip(rows[0]) : null;
+  return run(`getStoredClipBySlug(${slug})`, null, async (db) => {
+    const row = await db.prepare(`select * from clips_full where slug = ? limit 1`).bind(slug).first();
+    return row ? toClip(row) : null;
   });
 }
 
@@ -311,11 +343,12 @@ export async function getStoredClipBySlug(slug: string): Promise<Clip | null> {
  * the same way it sanitises a URL scraped from a comment.
  */
 export async function getStoredSourceUrl(videoId: string): Promise<string | null> {
-  return run(`getStoredSourceUrl(${videoId})`, null, async (sql) => {
-    const rows = await sql`
-      select source_url from clip_scripts where video_id = ${videoId} limit 1
-    `;
-    const url = rows[0]?.source_url;
+  return run(`getStoredSourceUrl(${videoId})`, null, async (db) => {
+    const row = await db
+      .prepare(`select source_url from clip_scripts where video_id = ? limit 1`)
+      .bind(videoId)
+      .first();
+    const url = row?.source_url;
     return typeof url === "string" && url.length > 0 ? url : null;
   });
 }
@@ -325,16 +358,27 @@ export async function getStoredSourceUrl(videoId: string): Promise<string | null
  * which clips already have a Vercel Blob copy. A DB read, not blob `list()`:
  * the URL is already a column here, and this stays inside the same
  * never-throw discipline as everything else in this file.
+ *
+ * Chunked by 90: D1 caps a statement at 100 bound parameters. Called with the
+ * ≤50-clip live window today, so this is one query in practice.
  */
 export async function getStoredThumbs(
   ids: string[],
 ): Promise<Map<string, { url: string; width: number; height: number }>> {
   if (ids.length === 0) return new Map();
-  return run("getStoredThumbs", new Map(), async (sql) => {
-    const rows = await sql`
-      select id, thumbnail_url, thumbnail_width, thumbnail_height
-      from clips where id = any(${ids})
-    `;
+  return run("getStoredThumbs", new Map(), async (db) => {
+    const rows: Record<string, unknown>[] = [];
+    for (let i = 0; i < ids.length; i += 90) {
+      const chunk = ids.slice(i, i + 90);
+      const { results } = await db
+        .prepare(
+          `select id, thumbnail_url, thumbnail_width, thumbnail_height
+          from clips where id in (${chunk.map(() => "?").join(",")})`,
+        )
+        .bind(...chunk)
+        .all();
+      rows.push(...results);
+    }
     return new Map(
       rows.map((r) => [
         String(r.id),
@@ -352,11 +396,10 @@ export async function getStoredThumbs(
 export async function getStoredRefById(
   id: string,
 ): Promise<{ slug: string; category: CategorySlug } | null> {
-  return run(`getStoredRefById(${id})`, null, async (sql) => {
-    const rows = (await sql`select slug, category from clips where id = ${id} limit 1`) as {
-      slug: string;
-      category: CategorySlug;
-    }[];
-    return rows[0] ?? null;
+  return run(`getStoredRefById(${id})`, null, async (db) => {
+    return db
+      .prepare(`select slug, category from clips where id = ? limit 1`)
+      .bind(id)
+      .first<{ slug: string; category: CategorySlug }>();
   });
 }

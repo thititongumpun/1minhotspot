@@ -1,7 +1,7 @@
 // Self-check, no framework: `rtk pnpm exec tsx lib/clips.test.ts`. Exits 0 when green.
 import assert from "node:assert/strict";
 // Pinned before any Bangkok-boundary math runs below: bangkokYearMonth (in
-// clips.ts) always passes an explicit timeZone, so this should be a no-op —
+// store.ts) always passes an explicit timeZone, so this should be a no-op —
 // pinning proves that, the same way components/format.test.ts pins TZ to
 // keep formatDate's own timeZone option honest.
 process.env.TZ = "UTC";

@@ -10,8 +10,8 @@
  * Re-querying each video by id also mints a fresh fbcdn signature, so this
  * doubles as a stopgap for the `oe=` expiry noted below.
  */
-import { neon } from "@neondatabase/serverless";
 import { pickFormat } from "../lib/providers/facebook";
+import { d1, lit } from "./_d1";
 import { loadEnvLocal } from "./_env";
 
 loadEnvLocal();
@@ -25,17 +25,16 @@ async function bytes(url: string): Promise<number> {
 }
 
 async function main() {
-  const { DATABASE_URL, FB_ACCESS_TOKEN } = process.env;
+  const { FB_ACCESS_TOKEN } = process.env;
   const version = process.env.FB_API_VERSION || "v26.0";
-  if (!DATABASE_URL || !FB_ACCESS_TOKEN) {
-    console.error("Need DATABASE_URL and FB_ACCESS_TOKEN in .env.local.");
+  if (!FB_ACCESS_TOKEN) {
+    console.error("Need FB_ACCESS_TOKEN in .env.local.");
     process.exit(1);
   }
 
-  const sql = neon(DATABASE_URL);
-  const rows = (await sql`
-    select id, slug, thumbnail_url, thumbnail_width from clips order by published_at desc
-  `) as { id: string; slug: string; thumbnail_url: string; thumbnail_width: number }[];
+  const rows = d1<{ id: string; slug: string; thumbnail_url: string; thumbnail_width: number }>(
+    "select id, slug, thumbnail_url, thumbnail_width from clips order by published_at desc",
+  );
 
   let updated = 0;
   let before = 0;
@@ -66,13 +65,10 @@ async function main() {
     console.log(`${row.thumbnail_width} -> ${pick.width}  ${row.slug}`);
 
     if (apply) {
-      await sql`
-        update clips
-           set thumbnail_url = ${pick.url},
-               thumbnail_width = ${pick.width},
-               thumbnail_height = ${pick.height}
-         where id = ${row.id}
-      `;
+      d1(
+        `update clips set thumbnail_url = ${lit(pick.url)}, thumbnail_width = ${lit(pick.width)},
+           thumbnail_height = ${lit(pick.height)} where id = ${lit(row.id)}`,
+      );
     }
   }
 

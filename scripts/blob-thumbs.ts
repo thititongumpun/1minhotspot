@@ -8,9 +8,9 @@
  * Vercel Blob store go dark when that store is paused. Both are re-fetched
  * from Graph, never from the old store. New ingests go through blobThumbnails.
  */
-import { neon } from "@neondatabase/serverless";
 import { fetchLargestStill, isArchivedUrl, isVercelBlobUrl } from "../lib/thumb-blob";
 import { hasR2Credentials, putObject } from "../lib/r2";
+import { d1, lit } from "./_d1";
 import { loadEnvLocal } from "./_env";
 
 loadEnvLocal();
@@ -19,9 +19,8 @@ const apply = process.argv.includes("--apply");
 const force = process.argv.includes("--force");
 
 async function main() {
-  const { DATABASE_URL, FB_ACCESS_TOKEN } = process.env;
+  const { FB_ACCESS_TOKEN } = process.env;
   const missing = [
-    !DATABASE_URL && "DATABASE_URL",
     !FB_ACCESS_TOKEN && "FB_ACCESS_TOKEN",
     apply && !hasR2Credentials() && "R2_ACCOUNT_ID/R2_ACCESS_KEY_ID/R2_SECRET_ACCESS_KEY/R2_BUCKET/R2_PUBLIC_HOST",
   ].filter(Boolean);
@@ -30,10 +29,9 @@ async function main() {
     process.exit(1);
   }
 
-  const sql = neon(DATABASE_URL!);
-  const rows = (await sql`
-    select id, slug, thumbnail_url from clips order by published_at desc
-  `) as { id: string; slug: string; thumbnail_url: string }[];
+  const rows = d1<{ id: string; slug: string; thumbnail_url: string }>(
+    "select id, slug, thumbnail_url from clips order by published_at desc",
+  );
 
   let n = 0;
 
@@ -62,13 +60,10 @@ async function main() {
           await res.arrayBuffer(),
           res.headers.get("content-type") ?? "image/jpeg",
         );
-        await sql`
-          update clips
-             set thumbnail_url = ${url},
-                 thumbnail_width = ${still.width},
-                 thumbnail_height = ${still.height}
-           where id = ${row.id}
-        `;
+        d1(
+          `update clips set thumbnail_url = ${lit(url)}, thumbnail_width = ${lit(still.width)},
+             thumbnail_height = ${lit(still.height)} where id = ${lit(row.id)}`,
+        );
       }
 
       n++;

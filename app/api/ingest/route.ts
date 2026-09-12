@@ -96,7 +96,7 @@ export async function POST(request: Request): Promise<Response> {
     return fail(400, "nothing to store: send at least one of scriptTh, articleTh, rewrittenTitle, sourceUrl, sourcePublisher");
   }
 
-  // upsertScript never throws; false means no DATABASE_URL or a failed query.
+  // upsertScript never throws; false means no D1 binding or a failed query.
   // Answer 5xx either way so n8n retries instead of dropping the rewrite.
   if (!(await upsertScript(input))) {
     return fail(503, "store unavailable — script was not persisted, retry");

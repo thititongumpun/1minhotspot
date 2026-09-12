@@ -54,3 +54,6 @@ backfill*.log
 .wrangler
 .dev.vars*
 !.dev.vars.example
+
+# D1 export dumps (scripts/neon-export.ts)
+db/export/

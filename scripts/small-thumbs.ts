@@ -13,9 +13,9 @@
  * own domain and is exactly the source we want to resize; re-fetching from
  * Facebook would burn Graph quota and could hand back a different frame.
  */
-import { neon } from "@neondatabase/serverless";
 import { putSmallThumb, smallThumbUrl } from "../lib/thumb-blob";
 import { hasR2Credentials } from "../lib/r2";
+import { d1 } from "./_d1";
 import { loadEnvLocal } from "./_env";
 
 loadEnvLocal();
@@ -24,11 +24,9 @@ const apply = process.argv.includes("--apply");
 const skipExisting = process.argv.includes("--skip-existing");
 
 async function main() {
-  const { DATABASE_URL } = process.env;
   // R2 is required even for a dry run: smallThumbUrl() keys off R2_PUBLIC_HOST,
   // so without it every row looks like a non-R2 row and the run is a silent no-op.
   const missing = [
-    !DATABASE_URL && "DATABASE_URL",
     !hasR2Credentials() && "R2_ACCOUNT_ID/R2_ACCESS_KEY_ID/R2_SECRET_ACCESS_KEY/R2_BUCKET/R2_PUBLIC_HOST",
   ].filter(Boolean);
   if (missing.length) {
@@ -36,10 +34,9 @@ async function main() {
     process.exit(1);
   }
 
-  const sql = neon(DATABASE_URL!);
-  const rows = (await sql`
-    select id, slug, thumbnail_url from clips order by published_at desc
-  `) as { id: string; slug: string; thumbnail_url: string }[];
+  const rows = d1<{ id: string; slug: string; thumbnail_url: string }>(
+    "select id, slug, thumbnail_url from clips order by published_at desc",
+  );
 
   let n = 0;
 

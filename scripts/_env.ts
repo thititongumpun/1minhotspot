@@ -1,24 +1,15 @@
 import { strict as assert } from "node:assert";
 import { existsSync, readFileSync } from "node:fs";
-import { setDefaultAutoSelectFamilyAttemptTimeout } from "node:net";
-
-// Node's happy-eyeballs connect gives each resolved address 250ms by default.
-// Neon's pooler lives in us-east-1 and a TCP handshake from Thailand takes
-// about that long, so every address "times out" and fetch throws
-// AggregateError [ETIMEDOUT] while curl to the same host succeeds. Vercel runs
-// next to the database and never hits this; only the local scripts do.
-setDefaultAutoSelectFamilyAttemptTimeout(2000);
 
 /**
  * Minimal .env.local loader for the tsx scripts. Next loads .env.local itself;
  * plain node/tsx does not, and dotenv is not a dependency here.
  *
- * `vercel env pull` writes every value double-quoted (DATABASE_URL="postgres://…").
- * Those quotes are file syntax, not part of the value — keeping them makes
- * neon() reject the connection string as "not a valid URL" and sends a token
- * with a leading `"` to Graph. Strip a matching pair, never a lone quote.
+ * `vercel env pull` wrote every value double-quoted (FB_ACCESS_TOKEN="EAA…").
+ * Those quotes are file syntax, not part of the value — keeping them sends a
+ * token with a leading `"` to Graph. Strip a matching pair, never a lone quote.
  *
- * Existing process env always wins, so `DATABASE_URL=… pnpm exec tsx …` still
+ * Existing process env always wins, so `FB_ACCESS_TOKEN=… pnpm exec tsx …` still
  * overrides the file.
  */
 export function loadEnvLocal(path = ".env.local"): void {
@@ -38,7 +29,7 @@ export function unquote(v: string): string {
 
 // Self-check: pnpm exec tsx scripts/_env.ts
 if (process.argv[1]?.endsWith("_env.ts")) {
-  assert.equal(unquote('"postgres://a:b@h/db?x=1"'), "postgres://a:b@h/db?x=1");
+  assert.equal(unquote('"https://a:b@h/db?x=1"'), "https://a:b@h/db?x=1");
   assert.equal(unquote("'tok'"), "tok");
   assert.equal(unquote("plain"), "plain");
   assert.equal(unquote('"unbalanced'), '"unbalanced', "a lone quote is part of the value");
