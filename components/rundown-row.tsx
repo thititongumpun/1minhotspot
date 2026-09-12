@@ -25,7 +25,7 @@ export function RundownRow({ clip, index }: { clip: Clip; index: number }) {
           sizes="96px"
           className="aspect-video w-16 shrink-0 bg-surface object-cover sm:w-24"
         />
-        <span className="headline-wrap min-w-0 flex-1 font-display text-sm font-bold text-fg group-hover:text-hot sm:text-base">
+        <span className="headline-wrap min-w-0 flex-1 font-display text-base font-bold text-fg group-hover:text-hot">
           {clip.title}
         </span>
         <span className="timecode shrink-0 whitespace-nowrap">

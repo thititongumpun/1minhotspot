@@ -78,7 +78,7 @@ export default async function CategoryPage({
       </nav>
 
       <SectionHead kicker={`หมวด ${label}`} heading={label} as="h1" />
-      <p className="mt-4 max-w-[68ch] text-[15px] text-muted">{found.intro}</p>
+      <p className="mt-4 max-w-[68ch] text-muted">{found.intro}</p>
       <p className="timecode mt-4">ทั้งหมด {clips.length} คลิป</p>
 
       {clips.length === 0 ? (

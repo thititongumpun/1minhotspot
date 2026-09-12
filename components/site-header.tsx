@@ -50,7 +50,7 @@ export function SiteHeader() {
               <li key={href}>
                 <Link
                   href={href}
-                  className="block py-2 text-[13px] whitespace-nowrap text-muted transition-colors hover:text-hot"
+                  className="block py-3 text-[15px] whitespace-nowrap text-muted transition-colors hover:text-hot"
                 >
                   {label}
                 </Link>

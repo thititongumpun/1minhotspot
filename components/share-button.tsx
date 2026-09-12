@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 // ponytail: plain share URLs, no SDKs; add share counts only if ever requested.
 
 const PILL =
-  "inline-flex items-center gap-2 rounded-full border border-hot px-4 py-2 text-sm font-medium text-hot transition-colors hover:bg-hot hover:text-ink";
+  "inline-flex items-center gap-2 rounded-full border border-hot px-4 py-2.5 text-sm font-medium text-hot transition-colors hover:bg-hot hover:text-ink";
 
 function ShareIcon() {
   return (

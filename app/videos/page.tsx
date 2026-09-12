@@ -97,14 +97,14 @@ export default async function VideosPage({ searchParams }: PageProps<"/videos">)
       {(page > 1 || page < total) && (
         <nav aria-label="แบ่งหน้า" className="mt-8 flex items-center justify-between text-sm">
           {page > 1 ? (
-            <Link href={pagePath(page - 1)} rel="prev" className="text-hot hover:underline">
+            <Link href={pagePath(page - 1)} rel="prev" className="inline-block py-2 text-hot hover:underline">
               หน้าก่อนหน้า
             </Link>
           ) : (
             <span />
           )}
           {page < total ? (
-            <Link href={pagePath(page + 1)} rel="next" className="text-hot hover:underline">
+            <Link href={pagePath(page + 1)} rel="next" className="inline-block py-2 text-hot hover:underline">
               หน้าถัดไป
             </Link>
           ) : (

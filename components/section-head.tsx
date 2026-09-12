@@ -25,7 +25,7 @@ export function SectionHead({
       {seeAllHref && seeAllLabel ? (
         <Link
           href={seeAllHref}
-          className="shrink-0 text-sm font-medium whitespace-nowrap text-hot hover:underline"
+          className="shrink-0 py-1 text-base font-medium whitespace-nowrap text-hot hover:underline"
         >
           {seeAllLabel}
         </Link>

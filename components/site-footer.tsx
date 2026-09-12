@@ -54,7 +54,7 @@ export function SiteFooter() {
               <li key={href}>
                 <Link
                   href={href}
-                  className="text-sm whitespace-nowrap text-muted transition-colors hover:text-hot"
+                  className="inline-block py-1 text-[15px] whitespace-nowrap text-muted transition-colors hover:text-hot"
                 >
                   {label}
                 </Link>
@@ -73,7 +73,7 @@ export function SiteFooter() {
                   href={href}
                   rel="me noopener noreferrer"
                   target="_blank"
-                  className="text-sm whitespace-nowrap text-muted transition-colors hover:text-hot"
+                  className="inline-block py-1 text-[15px] whitespace-nowrap text-muted transition-colors hover:text-hot"
                 >
                   {label}
                 </a>
@@ -96,7 +96,7 @@ export function SiteFooter() {
                 <li key={href}>
                   <Link
                     href={href}
-                    className="text-sm whitespace-nowrap text-muted transition-colors hover:text-hot"
+                    className="inline-block py-1 text-[15px] whitespace-nowrap text-muted transition-colors hover:text-hot"
                   >
                     {label}
                   </Link>

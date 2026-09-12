@@ -18,7 +18,7 @@ export default function PrivacyPage() {
           นโยบายความเป็นส่วนตัว
         </h1>
 
-        <div className="rule mt-8 space-y-8 pt-8 text-[15px]">
+        <div className="rule mt-8 space-y-8 pt-8">
           <section>
             <h2 className="font-display text-xl font-bold text-fg">ข้อมูลที่เราเก็บ</h2>
             <p className="mt-3">

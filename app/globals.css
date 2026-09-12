@@ -135,7 +135,7 @@
   /* Section label above a display heading: mono, tracked out, amber, small. */
   .kicker {
     font-family: var(--font-mono);
-    font-size: 0.6875rem;
+    font-size: 0.8125rem;
     font-weight: 500;
     line-height: 1.2;
     letter-spacing: 0.12em;
@@ -166,7 +166,7 @@
   /* Mono numerals for 0:47 — tabular so columns of timecodes line up. */
   .timecode {
     font-family: var(--font-mono);
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     font-weight: 500;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.02em;

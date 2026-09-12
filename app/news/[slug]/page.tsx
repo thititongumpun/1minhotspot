@@ -197,7 +197,7 @@ export default async function ArticlePage({ params }: PageProps<"/news/[slug]">)
               hold only the row-spanning aside and grid would hand it half the
               embed's height — push the body up into row 1 instead. */}
           <div
-            className={`max-w-[68ch] space-y-5 lg:col-start-1 ${lead ? "lg:row-start-2" : "lg:row-start-1"}`}
+            className={`max-w-[68ch] space-y-5 text-[17px] leading-[1.75] lg:text-lg lg:leading-[1.75] lg:col-start-1 ${lead ? "lg:row-start-2" : "lg:row-start-1"}`}
           >
             {rest.map((paragraph, i) => (
               <p key={i} className="headline-wrap">
@@ -232,7 +232,7 @@ export default async function ArticlePage({ params }: PageProps<"/news/[slug]">)
                   className="rule-left mt-3 border-l-2 border-l-hot"
                 >
                   {source.excerpt.split("\n\n").map((paragraph, i) => (
-                    <p key={i} className="headline-wrap text-muted first:mt-0 mt-4">
+                    <p key={i} className="headline-wrap first:mt-0 mt-4">
                       {paragraph}
                     </p>
                   ))}

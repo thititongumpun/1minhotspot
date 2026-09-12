@@ -90,7 +90,7 @@ export function MostViewed({ clips }: { clips: Clip[] }) {
                   </>
                 )}
               </span>
-              <span className="headline-wrap min-w-0 flex-1 font-display text-sm font-bold text-fg group-hover:text-hot sm:text-base">
+              <span className="headline-wrap min-w-0 flex-1 font-display text-base font-bold text-fg group-hover:text-hot">
                 {clip.title}
               </span>
               <span className="kicker hidden shrink-0 sm:block">

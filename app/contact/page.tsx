@@ -18,7 +18,7 @@ export default function ContactPage() {
           ติดต่อเรา
         </h1>
 
-        <div className="rule mt-8 space-y-8 pt-8 text-[15px]">
+        <div className="rule mt-8 space-y-8 pt-8">
           <section>
             <h2 className="font-display text-xl font-bold text-fg">อีเมล</h2>
             <p className="mt-3">
