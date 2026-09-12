@@ -128,6 +128,16 @@ function articleBodyOf(clip: Clip): string {
     .join("\n\n");
 }
 
+/** For hand-built XML (news sitemap, RSS): the five characters XML 1.0 reserves. */
+export function escapeXml(input: string): string {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
 export function newsArticleJsonLd(clip: Clip) {
   const url = absoluteUrl(`/news/${clip.slug}`);
   const body = articleBodyOf(clip);

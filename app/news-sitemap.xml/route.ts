@@ -1,19 +1,10 @@
 import { getClips } from "@/lib/clips";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl, escapeXml } from "@/lib/seo";
 
 export const revalidate = 3600;
 
 const PUBLICATION_NAME = "สรุปข่าวร้อนใน 1 นาที";
 const NEWS_WINDOW_MS = 48 * 60 * 60 * 1000; // Google News rejects entries older than 48h.
-
-function escapeXml(input: string): string {
-  return input
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
-}
 
 export async function GET() {
   const now = Date.now();
@@ -21,7 +12,11 @@ export async function GET() {
     (clip) =>
       now - Date.parse(clip.publishedAt) <= NEWS_WINDOW_MS &&
       // Sample clips are fabricated stories; never submit them to Google News.
-      (clip.source !== "sample" || process.env.NODE_ENV !== "production"),
+      (clip.source !== "sample" || process.env.NODE_ENV !== "production") &&
+      // Without the n8n rewrite the page is a caption plus a placeholder — a
+      // thin page Google News rejects. It joins once /api/ingest lands the
+      // rewrite, which revalidates this route.
+      clip.hasScript,
   );
 
   const urlEntries = fresh.map((clip) => {

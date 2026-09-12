@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { unstable_cache } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import type { CategorySlug, Clip } from "./types";
 import { fetchFacebookClips, fetchFacebookVideo } from "./providers/facebook";
 import { fetchYouTubeClips } from "./providers/youtube";
@@ -7,6 +7,19 @@ import { getSourceArticle } from "./providers/source-article";
 import { sampleClips } from "./sample-clips";
 import { hasDb } from "./db";
 import { getMostViewed, getStoredClipBySlug, getStoredClips, upsertClip } from "./store";
+
+/**
+ * Every list that names a clip: the feed snapshot, the home and category pages,
+ * both sitemaps and the RSS feed. Called when a reel is archived out of band
+ * (/v/<id>) or its rewrite lands (/api/ingest), so Google sees a new story in
+ * seconds instead of after the hourly ISR sweep plus the hourly feed cache.
+ */
+export function revalidateClipLists(category: CategorySlug): void {
+  revalidateTag("clips", "max");
+  for (const path of ["/", `/category/${category}`, "/sitemap.xml", "/news-sitemap.xml", "/feed.xml"]) {
+    revalidatePath(path);
+  }
+}
 import { blobThumbnails } from "./thumb-blob";
 
 const byNewest = (a: Clip, b: Clip) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt);

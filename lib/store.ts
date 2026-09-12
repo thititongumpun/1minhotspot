@@ -41,8 +41,10 @@ const toClip = (r: Record<string, unknown>): Clip => ({
   // fall through to whatever the provider description yielded — possibly "",
   // which the site's honest-placeholder logic already handles.
   body: (r.article_th as string) || (r.script_th as string) || (r.body as string) || "",
-  // Kept beside the coalesce above, so the two can never disagree.
-  hasScript: Boolean(r.article_th || r.script_th),
+  // Kept beside the coalesce above, so the two can never disagree. List rows
+  // carry the SQL-computed `has_script` instead of the texts: the news sitemap
+  // gates on it, and the texts are too heavy to ship on every listing.
+  hasScript: Boolean(r.article_th || r.script_th || r.has_script),
   // The narration is the transcript whichever text is the body; when there is
   // no written article the two are the same string, as before.
   ...(r.script_th ? { transcript: r.script_th as string } : {}),
@@ -197,7 +199,8 @@ export async function getStoredClips(limit = DEFAULT_LIMIT): Promise<Clip[]> {
         slug, id, source, title, category,
         published_at, updated_at, duration_sec,
         thumbnail_url, thumbnail_width, thumbnail_height,
-        embed_url, permalink, views, rewritten_title
+        embed_url, permalink, views, rewritten_title,
+        (coalesce(article_th, '') <> '' or coalesce(script_th, '') <> '') as has_script
       from clips_full order by published_at desc limit ${Math.max(0, limit)}
     `;
     return rows.map(toClip);
@@ -278,7 +281,8 @@ export async function getMostViewed(n: number): Promise<Clip[]> {
         slug, id, source, title, category,
         published_at, updated_at, duration_sec,
         thumbnail_url, thumbnail_width, thumbnail_height,
-        embed_url, permalink, views, rewritten_title
+        embed_url, permalink, views, rewritten_title,
+        (coalesce(article_th, '') <> '' or coalesce(script_th, '') <> '') as has_script
       from clips_full
       where published_at >= date_trunc('month', now() at time zone 'Asia/Bangkok') at time zone 'Asia/Bangkok'
         and views > 0
@@ -345,9 +349,14 @@ export async function getStoredThumbs(
 }
 
 /** Slug for one Facebook video id, or null. Backs the /v/<id> redirect. */
-export async function getStoredSlugById(id: string): Promise<string | null> {
-  return run(`getStoredSlugById(${id})`, null, async (sql) => {
-    const rows = (await sql`select slug from clips where id = ${id} limit 1`) as { slug: string }[];
-    return rows[0]?.slug ?? null;
+export async function getStoredRefById(
+  id: string,
+): Promise<{ slug: string; category: CategorySlug } | null> {
+  return run(`getStoredRefById(${id})`, null, async (sql) => {
+    const rows = (await sql`select slug, category from clips where id = ${id} limit 1`) as {
+      slug: string;
+      category: CategorySlug;
+    }[];
+    return rows[0] ?? null;
   });
 }

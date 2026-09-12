@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
-import { siteUrl, SITE_DESCRIPTION } from "@/lib/seo";
+import { absoluteUrl, siteUrl, SITE_DESCRIPTION } from "@/lib/seo";
 import { fontVars } from "./fonts";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -59,6 +59,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="th" className={`h-full antialiased ${fontVars}`}>
       <body className="min-h-full flex flex-col">
+        {/* A plain element, not metadata.alternates: every page sets
+            alternates.canonical, and Next replaces the whole `alternates`
+            object per page rather than merging it — the layout-level entry
+            never rendered. React hoists this into <head>. */}
+        <link
+          rel="alternate"
+          type="application/rss+xml"
+          title="สรุปข่าวร้อนใน 1 นาที"
+          href={absoluteUrl("/feed.xml")}
+        />
         <a href="#content" className="skip-link">
           ข้ามไปยังเนื้อหา
         </a>

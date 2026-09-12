@@ -1,6 +1,7 @@
 // Self-check, no framework: `rtk pnpm exec tsx lib/seo.test.ts`. Exits 0 when green.
 import assert from "node:assert/strict";
 import {
+  escapeXml,
   absoluteUrl,
   MAX_DESCRIPTION,
   newsArticleJsonLd,
@@ -157,6 +158,9 @@ function main() {
   const empty = newsArticleJsonLd({ ...clip, body: PLACEHOLDER });
   assert.ok(!("articleBody" in empty) && !("wordCount" in empty), "no body -> neither field");
   console.log("ok  NewsArticle: articleBody strips the placeholder, wordCount is ICU words");
+
+  assert.equal(escapeXml(`a<b>&"c'`), "a&lt;b&gt;&amp;&quot;c&apos;");
+  console.log("ok  escapeXml covers the five reserved chars");
 }
 
 main();

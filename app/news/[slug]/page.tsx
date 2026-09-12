@@ -123,8 +123,19 @@ export default async function ArticlePage({ params }: PageProps<"/news/[slug]">)
           <h1 className="headline-wrap mt-3 font-display text-[clamp(1.75rem,4.5vw,3.5rem)] leading-[1.15] font-bold text-fg">
             {clip.title}
           </h1>
+          {/* Visible byline and dates: Google News policy wants them on the
+              page, not only in JSON-LD. อัปเดต only when it lands on a
+              different Bangkok day, so the two dates never read the same. */}
           <p className="timecode mt-4 flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span>โดย กองบรรณาธิการ 1minhotspot</span>
+            <span aria-hidden>·</span>
             <time dateTime={clip.publishedAt}>เผยแพร่เมื่อ {formatDate(clip.publishedAt)}</time>
+            {formatDate(clip.updatedAt) !== formatDate(clip.publishedAt) && (
+              <>
+                <span aria-hidden>·</span>
+                <time dateTime={clip.updatedAt}>อัปเดต {formatDate(clip.updatedAt)}</time>
+              </>
+            )}
             <span aria-hidden>·</span>
             <span>ความยาว {formatTimecode(clip.durationSec)}</span>
           </p>

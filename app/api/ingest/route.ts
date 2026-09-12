@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { getStoredSlugById, upsertScript, type ScriptInput } from "@/lib/store";
+import { revalidateClipLists } from "@/lib/clips";
+import { getStoredRefById, upsertScript, type ScriptInput } from "@/lib/store";
 
 // Caching: nothing to opt out of. Next 16 does not cache Route Handlers by
 // default, and only `GET` can ever opt in — see
@@ -103,9 +104,14 @@ export async function POST(request: Request): Promise<Response> {
 
   // Revalidate the article page on-demand instead of relying on the hourly
   // ISR sweep. No slug yet means the clip hasn't been archived — nothing
-  // cached to invalidate.
-  const slug = await getStoredSlugById(videoId);
-  if (slug) revalidatePath(`/news/${slug}`);
+  // cached to invalidate. The lists go too: a rewritten title is what the
+  // cards and <news:title> show, and a body arriving is what lets the news
+  // sitemap list the page at all.
+  const ref = await getStoredRefById(videoId);
+  if (ref) {
+    revalidatePath(`/news/${ref.slug}`);
+    revalidateClipLists(ref.category);
+  }
 
   return json({ ok: true, videoId }, 200);
 }

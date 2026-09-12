@@ -12,6 +12,7 @@ const SITE_LINKS = [
   { label: "เกี่ยวกับเรา", href: "/about" },
   { label: "นโยบายความเป็นส่วนตัว", href: "/privacy" },
   { label: "ติดต่อเรา", href: "/contact" },
+  { label: "RSS", href: "/feed.xml" },
 ];
 
 export function SiteFooter() {

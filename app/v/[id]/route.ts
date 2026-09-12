@@ -1,6 +1,6 @@
 import { permanentRedirect, notFound } from "next/navigation";
-import { archiveFreshClip, getClips } from "@/lib/clips";
-import { getStoredSlugById } from "@/lib/store";
+import { archiveFreshClip, getClips, revalidateClipLists } from "@/lib/clips";
+import { getStoredRefById } from "@/lib/store";
 
 /**
  * Stable id-based entry point: /v/<facebook video id> -> /news/<slug>.
@@ -18,11 +18,15 @@ export const dynamic = "force-dynamic";
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!/^\d{5,}$/.test(id)) notFound();
-  const slug =
-    (await getStoredSlugById(id)) ??
-    (await getClips()).find((c) => c.id === id)?.slug ??
-    (await archiveFreshClip(id))?.slug ??
-    null;
-  if (!slug) notFound();
+  let slug =
+    (await getStoredRefById(id))?.slug ?? (await getClips()).find((c) => c.id === id)?.slug ?? null;
+  if (!slug) {
+    const fresh = await archiveFreshClip(id);
+    if (!fresh) notFound();
+    slug = fresh.slug;
+    // The reel is in the store now but every list still shows the hour-old
+    // snapshot — flush them so the news sitemap carries it on the next crawl.
+    revalidateClipLists(fresh.category);
+  }
   permanentRedirect(`/news/${encodeURIComponent(slug)}`);
 }
