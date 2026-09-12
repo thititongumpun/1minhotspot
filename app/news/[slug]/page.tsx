@@ -8,6 +8,7 @@ import {
   breadcrumbJsonLd,
   clipDescription,
   newsArticleJsonLd,
+  pageOpenGraph,
   videoObjectJsonLd,
 } from "@/lib/seo";
 import { PLACEHOLDER } from "@/lib/normalize";
@@ -48,10 +49,10 @@ export async function generateMetadata({
     description,
     alternates: { canonical: url },
     openGraph: {
+      ...pageOpenGraph(url),
       type: "article",
       title: clip.title,
       description,
-      url,
       publishedTime: clip.publishedAt,
       modifiedTime: clip.updatedAt,
       // Setting openGraph.images overrides this segment's opengraph-image.tsx

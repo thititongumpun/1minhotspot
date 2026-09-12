@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getClipsByCategory } from "@/lib/clips";
-import { absoluteUrl, breadcrumbJsonLd, collectionPageJsonLd, MAX_DESCRIPTION } from "@/lib/seo";
+import { absoluteUrl, breadcrumbJsonLd, collectionPageJsonLd, MAX_DESCRIPTION, pageOpenGraph } from "@/lib/seo";
 import { truncate } from "@/lib/normalize";
 import { CATEGORIES, type CategorySlug } from "@/lib/types";
 import { ClipCard } from "@/components/clip-card";
@@ -34,6 +34,7 @@ export async function generateMetadata({
     title: `${found.label}วันนี้ — คลิปข่าวสั้น`,
     description: truncate(found.intro, MAX_DESCRIPTION),
     alternates: { canonical: absoluteUrl(`/category/${category}`) },
+    openGraph: pageOpenGraph(absoluteUrl(`/category/${category}`)),
   };
 }
 

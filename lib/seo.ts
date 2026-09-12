@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { isoDuration } from "@/components/format";
 import { countWords, PLACEHOLDER, truncate, truncateSentence } from "./normalize";
 import { categoryLabel, type Clip } from "./types";
@@ -49,6 +50,16 @@ export function absoluteUrl(path: string): string {
 }
 
 /** Google shows roughly this much of a meta description. */
+/**
+ * Open Graph for a plain page. og:title/og:description are inherited from the
+ * page's own title/description by Next, so only what it cannot infer is set —
+ * and it must be set on every page, because a page's `openGraph` replaces the
+ * layout's wholesale. Facebook's debugger flags any page missing og:url/og:type.
+ */
+export function pageOpenGraph(url: string): NonNullable<Metadata["openGraph"]> {
+  return { type: "website", url, siteName: SITE_NAME, locale: "th_TH" };
+}
+
 export const MAX_DESCRIPTION = 160;
 
 export const SITE_DESCRIPTION =

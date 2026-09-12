@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { JsonLd } from "@/components/json-ld";
-import { absoluteUrl, organizationJsonLd } from "@/lib/seo";
+import { absoluteUrl, organizationJsonLd, pageOpenGraph } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "เกี่ยวกับเรา",
   description:
     "รู้จักสรุปข่าวร้อนใน 1 นาที นโยบายบรรณาธิการ การแก้ไขข้อผิดพลาด ที่มาของข่าว วิธีให้เครดิตแหล่งข่าว และช่องทางติดตามบน Facebook และ YouTube",
   alternates: { canonical: absoluteUrl("/about") },
+  openGraph: pageOpenGraph(absoluteUrl("/about")),
 };
 
 export default function AboutPage() {

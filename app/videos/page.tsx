@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getClips } from "@/lib/clips";
-import { absoluteUrl, breadcrumbJsonLd } from "@/lib/seo";
+import { absoluteUrl, breadcrumbJsonLd, pageOpenGraph } from "@/lib/seo";
 import { JsonLd } from "@/components/json-ld";
 import { RundownRow } from "@/components/rundown-row";
 import { SectionHead } from "@/components/section-head";
@@ -43,6 +43,7 @@ export async function generateMetadata({ searchParams }: PageProps<"/videos">): 
     description:
       "รวมคลิปข่าวสั้นทั้งหมดจากสรุปข่าวร้อนใน 1 นาที เรียงจากใหม่ไปเก่า ครบทุกหมวดข่าว",
     alternates: { canonical: pageUrl(page) },
+    openGraph: pageOpenGraph(pageUrl(page)),
     // Next 16 emits <link rel="prev"/"next"> from this (metadata-interface.d.ts).
     pagination: {
       previous: page > 1 ? pageUrl(page - 1) : null,

@@ -21,6 +21,9 @@ export const metadata: Metadata = {
     template: "%s | สรุปข่าวร้อนใน 1 นาที",
   },
   description: SITE_DESCRIPTION,
+  // fb:app_id — a Meta app id (developers.facebook.com), not the page id. Only
+  // Facebook's debugger cares; unset just leaves the tag out.
+  facebook: process.env.NEXT_PUBLIC_FB_APP_ID ? { appId: process.env.NEXT_PUBLIC_FB_APP_ID } : undefined,
   // public/logo.png, not the app/icon.png file convention: that route is served
   // with a build hash, so this keeps the one icon crawlers see on a stable,
   // unhashed URL (the same file app/manifest.ts already points at).

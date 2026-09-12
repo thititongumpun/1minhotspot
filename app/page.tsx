@@ -6,7 +6,7 @@ import {
   getMostViewedThisMonth,
 } from "@/lib/clips";
 import { CATEGORIES } from "@/lib/types";
-import { absoluteUrl, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
+import { absoluteUrl, organizationJsonLd, pageOpenGraph, websiteJsonLd } from "@/lib/seo";
 import { ClipCard } from "@/components/clip-card";
 import { JsonLd } from "@/components/json-ld";
 import { LeadStory } from "@/components/lead-story";
@@ -21,6 +21,7 @@ export const metadata: Metadata = {
   // absolute: the home title already carries the brand; the layout template would double it.
   title: { absolute: "ข่าววันนี้ทุกหมวด | สรุปข่าวร้อนใน 1 นาที" },
   alternates: { canonical: absoluteUrl("/") },
+  openGraph: pageOpenGraph(absoluteUrl("/")),
 };
 
 export default async function Home() {
