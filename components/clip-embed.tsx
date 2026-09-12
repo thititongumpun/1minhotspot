@@ -20,7 +20,7 @@ export function ClipEmbed({ src, title, poster }: { src: string; title: string; 
 
   return (
     <div
-      className={`relative w-full overflow-hidden bg-surface ${isFacebook ? "aspect-[9/16]" : "aspect-video"}`}
+      className={`on-dark relative w-full overflow-hidden bg-surface ${isFacebook ? "aspect-[9/16]" : "aspect-video"}`}
     >
       {/* Hoisted to <head> by React, and rendered in BOTH states on purpose:
           the point of the facade is that the handshake to the embed origin is

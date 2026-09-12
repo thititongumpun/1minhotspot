@@ -2,12 +2,17 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ink:      oklch(0.155 0.014 264); /* page base */
-  --color-surface:  oklch(0.205 0.016 264); /* cards */
-  --color-hairline: oklch(0.325 0.018 264);
-  --color-fg:       oklch(0.972 0.004 264);
-  --color-muted:    oklch(0.715 0.014 264);
-  --color-hot:      oklch(0.745 0.185 62);  /* signal amber — the "hotspot" */
+  /* Light by default. The readership is 40–70: a warm paper ground (not pure
+     white, less glare) with near-black ink, and every text token at AAA
+     (>=7:1) or better — muted copy included, which is where most sites
+     quietly fail older eyes. Dark stays available below for readers who
+     asked their device for it. */
+  --color-ink:      oklch(0.975 0.008 85);  /* page base — warm paper */
+  --color-surface:  oklch(0.945 0.010 85);  /* cards */
+  --color-hairline: oklch(0.80 0.012 85);
+  --color-fg:       oklch(0.22 0.02 264);
+  --color-muted:    oklch(0.44 0.02 264);   /* 7.2:1 on paper */
+  --color-hot:      oklch(0.50 0.15 55);    /* burnt amber, 5.9:1 on paper */
 
   /* Latin faces lead; the Thai face is stacked behind every one of them so
      Thai copy never falls back to a system default — IBM Plex Mono in
@@ -27,7 +32,32 @@
 
   html {
     background-color: var(--color-ink);
-    color-scheme: dark;
+    color-scheme: light dark;
+  }
+
+  /* The original night palette, only when the device asks for it. Muted is
+     lifted from 0.715 to 0.78 for the same AAA floor as the light set. */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-ink:      oklch(0.155 0.014 264);
+      --color-surface:  oklch(0.205 0.016 264);
+      --color-hairline: oklch(0.325 0.018 264);
+      --color-fg:       oklch(0.972 0.004 264);
+      --color-muted:    oklch(0.78 0.014 264);
+      --color-hot:      oklch(0.745 0.185 62);
+    }
+  }
+
+  /* Text over a photo (lead scrim, embed poster) is always light-on-dark, in
+     either theme: the scrim is ink and the photo behind it is a reel frame,
+     so the island re-pins the tokens instead of every overlay picking literals. */
+  .on-dark {
+    --color-ink:      oklch(0.155 0.014 264);
+    --color-surface:  oklch(0.205 0.016 264);
+    --color-hairline: oklch(0.325 0.018 264);
+    --color-fg:       oklch(0.972 0.004 264);
+    --color-muted:    oklch(0.78 0.014 264);
+    --color-hot:      oklch(0.745 0.185 62);
   }
 
   body {

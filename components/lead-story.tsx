@@ -16,7 +16,7 @@ export function LeadStory({
   // the rundown column's height and the scrim would paint that overhang solid
   // ink — a black band under the still with the headline floating at its foot.
   return (
-    <Link href={`/news/${clip.slug}`} className="group relative block self-start">
+    <Link href={`/news/${clip.slug}`} className="on-dark group relative block self-start">
       {/* The lead is the hero/LCP and renders wider than 640px, so it keeps the large object; only cards use the 640px sibling. */}
       <Image
         src={clip.thumbnail.url}

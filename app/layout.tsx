@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { siteUrl, SITE_DESCRIPTION } from "@/lib/seo";
 import { fontVars } from "./fonts";
@@ -44,6 +44,15 @@ export const metadata: Metadata = {
       "max-video-preview": -1,
     },
   },
+};
+
+// Browser chrome follows the page ground in each scheme.
+export const viewport: Viewport = {
+  colorScheme: "light dark",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f9f6f1" },
+    { media: "(prefers-color-scheme: dark)", color: "#090c12" },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
