@@ -325,6 +325,29 @@ export async function getMostViewed(n: number, now = new Date()): Promise<Clip[]
   });
 }
 
+/**
+ * Top N by views published in the last `hours` — the /api/hot feed. Same
+ * ranking as getMostViewed with a rolling window instead of the Bangkok month.
+ *
+ * Not LIST_COLUMNS: the endpoint ships the body, and the list projection
+ * deliberately carries `has_script` instead of the texts (too heavy for every
+ * listing). Selecting them here keeps that weight off getStoredClips.
+ */
+export async function getHot(hours: number, limit: number, now = new Date()): Promise<Clip[]> {
+  return run("getHot", [], async (db) => {
+    const { results } = await db
+      .prepare(
+        `select ${LIST_COLUMNS}, article_th, script_th, body from clips_full
+        where published_at >= ? and views > 0 and source <> 'sample'
+        order by views desc, published_at desc
+        limit ?`,
+      )
+      .bind(new Date(now.getTime() - hours * 3600e3).toISOString(), Math.max(0, limit))
+      .all();
+    return results.map(toClip);
+  });
+}
+
 export async function getStoredClipBySlug(slug: string): Promise<Clip | null> {
   return run(`getStoredClipBySlug(${slug})`, null, async (db) => {
     const row = await db.prepare(`select * from clips_full where slug = ? limit 1`).bind(slug).first();
