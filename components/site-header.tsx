@@ -18,12 +18,15 @@ export function SiteHeader() {
           className="flex shrink-0 items-center gap-2 whitespace-nowrap"
         >
           <Image
-            src="/logo.png"
+            src="/logo-96.png"
             alt="สรุปข่าวร้อนใน 1 นาที"
-            width={512}
-            height={512}
-            // Without sizes, next/image fetches a 640px render for a 36px slot.
-            sizes="36px"
+            width={96}
+            height={96}
+            // images.unoptimized is on (next.config.ts), so next/image serves this
+            // file byte-for-byte and `sizes` buys nothing — the asset itself has to
+            // be the right size. 96px covers the 36px lg slot past 2.5x DPR. The
+            // 512px public/logo.png stays for the favicon, manifest and JSON-LD
+            // logo, none of which are on the critical path.
             // In the sticky header on every route — never below the fold.
             loading="eager"
             className="h-8 w-8 shrink-0 rounded-full lg:h-9 lg:w-9"
