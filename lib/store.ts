@@ -249,8 +249,8 @@ export async function getStoredClips(limit = DEFAULT_LIMIT): Promise<Clip[]> {
   });
 }
 
-/** Just enough to emit one <url> entry. Two columns, no join. */
-export type ClipRef = { slug: string; updatedAt: string };
+/** Just enough to emit one <url> entry, and to decide whether to emit it. */
+export type ClipRef = { slug: string; updatedAt: string; title: string; hasScript: boolean };
 
 /**
  * Every archived article, oldest included — the sitemap's row set.
@@ -260,9 +260,15 @@ export type ClipRef = { slug: string; updatedAt: string };
  * listing anything older and Google loses the URLs it already indexed. This has
  * no limit — it can't, the whole point is completeness.
  *
- * Uncapped rows are only affordable because the projection is two small
- * columns: ~120 bytes a row against ~1KB for a clips_full row, so the full
- * table costs less egress than the capped 500-row read it replaces.
+ * Uncapped rows are only affordable because the projection stays narrow:
+ * ~200 bytes a row against ~1KB for a full clips_full row, so the whole table
+ * still costs less egress than the capped 500-row read it replaced.
+ *
+ * `title` and `has_script` are carried (and the join to clips_full taken) so
+ * the sitemap can drop what shouldNoindex() drops. Filtering in SQL instead
+ * would mean a second copy of the lottery keyword list, in a second language,
+ * free to drift from lib/seo.ts — the sitemap and the page's robots meta must
+ * agree or Google sees the site contradict itself.
  *
  * ponytail: a sitemap tops out at 50,000 URLs — ~600 days at this publish
  * rate. Split into a sitemap index when that gets close.
@@ -270,9 +276,20 @@ export type ClipRef = { slug: string; updatedAt: string };
 export async function getAllClipRefs(): Promise<ClipRef[]> {
   return run("getAllClipRefs", [], async (db) => {
     const { results } = await db
-      .prepare(`select slug, updated_at from clips where source <> 'sample' order by published_at desc`)
+      .prepare(
+        `select slug, updated_at, title, rewritten_title,
+                (coalesce(article_th, '') <> '' or coalesce(script_th, '') <> '') as has_script
+           from clips_full where source <> 'sample' order by published_at desc`,
+      )
       .all();
-    return results.map((r) => ({ slug: String(r.slug), updatedAt: iso(r.updated_at) }));
+    return results.map((r) => ({
+      slug: String(r.slug),
+      updatedAt: iso(r.updated_at),
+      // Same precedence as toClip(): the rewritten headline is the one the
+      // page renders, so it is the one the noindex predicate must see.
+      title: (r.rewritten_title as string) || String(r.title),
+      hasScript: Boolean(r.has_script),
+    }));
   });
 }
 

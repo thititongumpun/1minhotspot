@@ -11,6 +11,8 @@ import {
   websiteJsonLd,
   clipDescription,
   collectionPageJsonLd,
+  isLotteryTip,
+  shouldNoindex,
 } from "./seo";
 import { PLACEHOLDER } from "./normalize";
 import { sampleClips } from "./sample-clips";
@@ -161,6 +163,45 @@ function main() {
 
   assert.equal(escapeXml(`a<b>&"c'`), "a&lt;b&gt;&amp;&quot;c&apos;");
   console.log("ok  escapeXml covers the five reserved chars");
+
+  // Every title below is a real one taken from the live sitemap. The false
+  // positives are the expensive direction — each one silently removes a
+  // legitimate news article from Google News — so they are asserted first.
+  const lotteryNews = [
+    "ทนายตั้มแฉ สลากคนพิการโดนใครดูด",
+    "ถูกหวย 4.9 พันล้าน บริจาคเกือบครึ่ง",
+    "แฉเว็บพนัน เงินหมุน 1.5 พันล้าน",
+  ];
+  for (const title of lotteryNews) {
+    assert.equal(isLotteryTip(title), false, `lottery NEWS must stay indexed: ${title}`);
+  }
+
+  const lotteryTips = [
+    "10 เลขเด็ดแม่จำเนียร 16 ก.ย.",
+    "ตรวจหวยลาว 11 ก.ย. 69 ล่าสุด",
+    "AI ชี้เป้า เลขเด็ดงวด 16/9/69 หวยออกวันพุธ",
+    "ปกสลาก 16 ก.ย. เผยเลขเด็ด บ้านท่าวัดเหนือ",
+    "หวยลาว 10/9/69 ล่าสุด เลขออกอะไร",
+    "ส่องสถิติหวยวันพุธ 20 ปี",
+    "ม้าสีหมอก ปล่อยเลขเด็ด 16/9/69",
+    "ปฏิทินคำชะโนด 16/9/69 เลขเด็ดมาแล้ว",
+    "เลขเด็ดปฏิทินจีน 1 ก.ย. 69",
+    "พระสิวลีลอยน้ำ วัดดังชัยนาท ชาวบ้านเห็นเลขเด็ด",
+  ];
+  for (const title of lotteryTips) {
+    assert.equal(isLotteryTip(title), true, `lottery TIP must be noindexed: ${title}`);
+  }
+  console.log(`ok  isLotteryTip: ${lotteryTips.length} tips out, ${lotteryNews.length} news stories kept`);
+
+  assert.equal(shouldNoindex({ title: "ตำรวจจับกุมผู้ต้องหา", hasScript: true }), false);
+  assert.equal(shouldNoindex({ title: "ตำรวจจับกุมผู้ต้องหา" }), true, "no rewrite -> thin page");
+  assert.equal(shouldNoindex({ title: "ตำรวจจับกุมผู้ต้องหา", hasScript: false }), true);
+  assert.equal(
+    shouldNoindex({ title: "เลขเด็ดปฏิทินจีน 1 ก.ย. 69", hasScript: true }),
+    true,
+    "a rewrite does not rescue a lottery tip",
+  );
+  console.log("ok  shouldNoindex: thin pages and lottery tips, nothing else");
 }
 
 main();

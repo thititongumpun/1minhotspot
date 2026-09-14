@@ -1,5 +1,5 @@
 import { getClips } from "@/lib/clips";
-import { absoluteUrl, escapeXml } from "@/lib/seo";
+import { absoluteUrl, escapeXml, shouldNoindex } from "@/lib/seo";
 
 export const revalidate = 3600;
 
@@ -15,8 +15,9 @@ export async function GET() {
       (clip.source !== "sample" || process.env.NODE_ENV !== "production") &&
       // Without the n8n rewrite the page is a caption plus a placeholder — a
       // thin page Google News rejects. It joins once /api/ingest lands the
-      // rewrite, which revalidates this route.
-      clip.hasScript,
+      // rewrite, which revalidates this route. shouldNoindex() also drops
+      // lottery tips, so the feed and the pages' own robots meta agree.
+      !shouldNoindex(clip),
   );
 
   const urlEntries = fresh.map((clip) => {

@@ -57,3 +57,6 @@ backfill*.log
 
 # D1 export dumps (scripts/neon-export.ts)
 db/export/
+
+# backfill batch job state (scripts/backfill-articles.ts)
+.backfill-*

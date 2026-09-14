@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getClips } from "@/lib/clips";
 import { getAllClipRefs, getCategoryLastMod, type ClipRef } from "@/lib/store";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl, shouldNoindex } from "@/lib/seo";
 import { CATEGORIES } from "@/lib/types";
 import type { Clip } from "@/lib/types";
 
@@ -28,7 +28,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         // feed. Sample clips are fabricated — browsable locally, never Google's.
         live
           .filter((c) => c.source !== "sample" || process.env.NODE_ENV !== "production")
-          .map((c) => ({ slug: c.slug, updatedAt: c.updatedAt }));
+          .map((c) => ({
+            slug: c.slug,
+            updatedAt: c.updatedAt,
+            title: c.title,
+            hasScript: Boolean(c.hasScript),
+          }));
 
   return [
     // Home — request-time new Date() is not a real modification date. Once Google
@@ -70,7 +75,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Article pages — highest priority, the SEO surface.
     // absoluteUrl percent-encodes each segment, so Thai slugs never reach
     // <loc> as raw UTF-8.
-    ...clips.map((clip) => ({
+    // Noindexed clips are omitted rather than listed: a sitemap entry is a
+    // request to index, so shipping one for a page whose own meta says
+    // noindex asks Google to resolve a contradiction we created.
+    ...clips.filter((clip) => !shouldNoindex(clip)).map((clip) => ({
       url: absoluteUrl(`/news/${clip.slug}`),
       lastModified: new Date(clip.updatedAt),
       changeFrequency: "daily" as const,

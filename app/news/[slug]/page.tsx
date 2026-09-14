@@ -9,6 +9,7 @@ import {
   clipDescription,
   newsArticleJsonLd,
   pageOpenGraph,
+  shouldNoindex,
   videoObjectJsonLd,
 } from "@/lib/seo";
 import { PLACEHOLDER } from "@/lib/normalize";
@@ -48,6 +49,10 @@ export async function generateMetadata({
     title: clip.title,
     description,
     alternates: { canonical: url },
+    // Live and linked, but out of the index — a thin no-rewrite page or a
+    // lottery tip. See shouldNoindex() in lib/seo.ts for why each one goes.
+    // `follow` stays on: these pages still link to real articles.
+    ...(shouldNoindex(clip) ? { robots: { index: false, follow: true } } : {}),
     openGraph: {
       ...pageOpenGraph(url),
       type: "article",

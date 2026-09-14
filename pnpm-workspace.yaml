@@ -1,7 +1,9 @@
 allowBuilds:
+  '@google/genai': false
   '@parcel/watcher': true
   '@swc/core': true
   esbuild: true
+  protobufjs: false
   sharp: true
   unrs-resolver: false
   workerd: false

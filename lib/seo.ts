@@ -91,6 +91,46 @@ export function clipDescription(clip: Clip): string | undefined {
   return truncateSentence(clip.summary, MAX_DESCRIPTION);
 }
 
+/**
+ * Lottery *tipping* — "lucky numbers", number-prediction calendars, foreign
+ * draw results. Gambling-facilitating content under AdSense's publisher
+ * restrictions, and a 39-page cluster of it is a plausible trigger for the
+ * site-level "Needs attention" review the site is currently stuck in.
+ *
+ * Deliberately narrow. It matches the tipping vocabulary, never the bare words
+ * หวย / สลาก / พนัน, because lottery *news* is ordinary reporting and must keep
+ * indexing: "ถูกหวย 4.9 พันล้าน บริจาคเกือบครึ่ง" (a winner donating) and
+ * "ทนายตั้มแฉ สลากคนพิการโดนใครดูด" (a fraud story) are news, not tips.
+ * A false positive here silently drops a good page out of Google News, so
+ * lib/seo.test.ts asserts both directions on real titles from the live site.
+ */
+const LOTTERY_TIP =
+  /เลขเด็ด|เลขนำโชค|เลขมงคล|เลขดัง|ปล่อยเลข|ให้เลข|แนวทางหวย|สถิติหวย|ตรวจหวย|หวยลาว|หวยฮานอย/;
+
+export function isLotteryTip(title: string): boolean {
+  return LOTTERY_TIP.test(title);
+}
+
+/**
+ * Pages that stay live and linked but leave the index.
+ *
+ * Two kinds, both of them things an AdSense reviewer would open and call a
+ * policy problem:
+ *
+ *  - `!hasScript` — no rewrite of our own, so the page is an embedded reel, a
+ *    caption, and at most a quoted excerpt someone else wrote. That is Google's
+ *    "insufficient content" example almost verbatim. Self-healing: once the
+ *    n8n rewrite (or scripts/backfill-articles.ts) lands an article_th,
+ *    hasScript flips true and the page re-enters the index with no code change.
+ *  - `isLotteryTip` — see above.
+ *
+ * `follow: true` on purpose: these pages still link to real articles, and
+ * dropping the crawl would strand the internal links pointing out of them.
+ */
+export function shouldNoindex(clip: Pick<Clip, "title"> & { hasScript?: boolean }): boolean {
+  return !clip.hasScript || isLotteryTip(clip.title);
+}
+
 /** Social profiles, kept in sync with components/site-footer.tsx. */
 const SAME_AS = [
   "https://www.facebook.com/1minhotspot",

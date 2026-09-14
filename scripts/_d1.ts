@@ -11,7 +11,12 @@ import { execFileSync } from "node:child_process";
 export function d1<T = Record<string, unknown>>(sql: string): T[] {
   const args = ["exec", "wrangler", "d1", "execute", "1minhotspot", "--remote", "--json", "--command", sql];
   try {
-    return (JSON.parse(execFileSync("pnpm", args, { encoding: "utf8", stdio: "pipe" })) as { results: T[] }[])[0].results;
+    // maxBuffer: execFileSync defaults to 1MB and throws ENOBUFS past it —
+    // surfacing here as a bogus "wrangler d1 failed" with the real rows in the
+    // error's stdout. An uncapped select over the whole clips table is ~2MB
+    // today and grows, so the default is a time bomb on every read path.
+    const opts = { encoding: "utf8" as const, stdio: "pipe" as const, maxBuffer: 256 * 1024 * 1024 };
+    return (JSON.parse(execFileSync("pnpm", args, opts)) as { results: T[] }[])[0].results;
   } catch (err) {
     // wrangler prints its error JSON on stdout (stderr is usually empty).
     const e = err as { stderr?: string; stdout?: string; message: string };
