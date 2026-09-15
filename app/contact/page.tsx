@@ -23,7 +23,7 @@ export default function ContactPage() {
             <h2 className="font-display text-xl font-bold text-fg">อีเมล</h2>
             <p className="mt-3">
               ติดต่อโฆษณา แจ้งแก้ไขข้อมูล หรือเรื่องลิขสิทธิ์และการขอให้นำเนื้อหาออก ส่งมาได้ที่{" "}
-              <a href="mailto:ads@1minhotspot.com" className="text-hot hover:underline">
+              <a href="mailto:ads@1minhotspot.com" className="link">
                 ads@1minhotspot.com
               </a>
             </p>
@@ -37,7 +37,7 @@ export default function ContactPage() {
                 href="https://www.facebook.com/1minhotspot"
                 target="_blank"
                 rel="me noopener noreferrer"
-                className="text-hot hover:underline"
+                className="link"
               >
                 facebook.com/1minhotspot
               </a>

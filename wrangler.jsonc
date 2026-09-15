@@ -8,13 +8,14 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS",
   },
-  "workers_dev": true,
+  "workers_dev": false,
   "routes": [
     { "pattern": "www.1minhotspot.com", "custom_domain": true },
     { "pattern": "1minhotspot.com", "custom_domain": true },
   ],
   "vars": {
     "NEXT_PUBLIC_SITE_URL": "https://www.1minhotspot.com",
+    "HERO_THUMBS": "1"
   },
   "durable_objects": {
     "bindings": [

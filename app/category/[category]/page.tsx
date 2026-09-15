@@ -65,8 +65,8 @@ export default async function CategoryPage({
           ]),
         ]}
       />
-      <nav aria-label="เส้นทางนำทาง" className="mb-6 flex items-center gap-2 text-sm">
-        <Link href="/" className="whitespace-nowrap text-muted hover:text-hot">
+      <nav aria-label="เส้นทางนำทาง" className="mb-6 flex items-center gap-2 text-base">
+        <Link href="/" className="tap whitespace-nowrap text-muted hover:text-hot">
           หน้าแรก
         </Link>
         <span aria-hidden className="text-muted">
@@ -97,7 +97,7 @@ export default async function CategoryPage({
           </div>
           {clips.length > shown.length && (
             <p className="mt-8">
-              <Link href="/videos" className="text-sm font-medium text-hot hover:underline">
+              <Link href="/videos" className="link tap text-base font-medium">
                 ดูทั้งหมด →
               </Link>
             </p>

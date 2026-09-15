@@ -42,7 +42,7 @@ export default function PrivacyPage() {
                 href="https://policies.google.com/technologies/ads"
                 target="_blank"
                 rel="noopener"
-                className="text-hot hover:underline"
+                className="link"
               >
                 policies.google.com/technologies/ads
               </a>{" "}
@@ -51,7 +51,7 @@ export default function PrivacyPage() {
                 href="https://www.google.com/settings/ads"
                 target="_blank"
                 rel="noopener"
-                className="text-hot hover:underline"
+                className="link"
               >
                 google.com/settings/ads
               </a>
@@ -80,7 +80,7 @@ export default function PrivacyPage() {
             <p className="mt-3">
               ผู้ใช้มีสิทธิ์ขอเข้าถึง แก้ไข หรือขอให้ลบข้อมูลส่วนบุคคลที่ส่งมาให้เราทางอีเมล หากมีข้อสงสัยหรือต้องการใช้สิทธิ์ดังกล่าว
               ติดต่อเราได้ที่{" "}
-              <a href="mailto:ads@1minhotspot.com" className="text-hot hover:underline">
+              <a href="mailto:ads@1minhotspot.com" className="link">
                 ads@1minhotspot.com
               </a>
             </p>

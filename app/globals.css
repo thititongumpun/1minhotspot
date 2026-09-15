@@ -1,4 +1,4 @@
-/* Hallmark · pre-emit critique: P4 H4 E4 S4 R5 V4 */
+/* Hallmark · pre-emit critique: P4 H5 E5 S4 R5 V4 · readability pass 2026-09-16: 18px root, 44px targets, 3:1 rules, links underlined */
 @import "tailwindcss";
 
 @theme {
@@ -9,7 +9,7 @@
      asked their device for it. */
   --color-ink:      oklch(0.975 0.008 85);  /* page base — warm paper */
   --color-surface:  oklch(0.945 0.010 85);  /* cards */
-  --color-hairline: oklch(0.80 0.012 85);
+  --color-hairline: oklch(0.64 0.012 85);  /* 3.1:1 on paper — dividers older eyes can see */
   --color-fg:       oklch(0.22 0.02 264);
   --color-muted:    oklch(0.44 0.02 264);   /* 7.2:1 on paper */
   --color-hot:      oklch(0.50 0.15 55);    /* burnt amber, 5.9:1 on paper */
@@ -19,8 +19,12 @@
      particular ships no Thai glyphs. */
   --font-display: var(--font-anuphan), ui-sans-serif, system-ui, sans-serif;
   --font-body: var(--font-plex-thai), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), var(--font-plex-thai), ui-monospace,
-    monospace;
+  /* Not a monospace face any more: IBM Plex Mono was two extra preloaded
+     files for kickers and 0:47 timecodes, and 13px uppercase mono was the
+     least readable text on the site for the 40–70 readership. The token name
+     stays so `font-mono` call sites keep working; tabular-nums does the
+     column alignment the mono face was there for. */
+  --font-mono: var(--font-plex-thai), ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer base {
@@ -41,7 +45,7 @@
     :root {
       --color-ink:      oklch(0.155 0.014 264);
       --color-surface:  oklch(0.205 0.016 264);
-      --color-hairline: oklch(0.325 0.018 264);
+      --color-hairline: oklch(0.50 0.018 264);
       --color-fg:       oklch(0.972 0.004 264);
       --color-muted:    oklch(0.78 0.014 264);
       --color-hot:      oklch(0.745 0.185 62);
@@ -54,10 +58,17 @@
   .on-dark {
     --color-ink:      oklch(0.155 0.014 264);
     --color-surface:  oklch(0.205 0.016 264);
-    --color-hairline: oklch(0.325 0.018 264);
+    --color-hairline: oklch(0.50 0.018 264);
     --color-fg:       oklch(0.972 0.004 264);
     --color-muted:    oklch(0.78 0.014 264);
     --color-hot:      oklch(0.745 0.185 62);
+  }
+
+  /* 18px root. Every rem-based size (Tailwind text-*, the kicker, the
+     timecode, the h1 clamp) scales with it, which is the one-line version of
+     "bigger type for readers over 40". Readers who zoom still zoom on top. */
+  html {
+    font-size: 112.5%;
   }
 
   body {
@@ -132,13 +143,13 @@
     padding-inline-start: 12px;
   }
 
-  /* Section label above a display heading: mono, tracked out, amber, small. */
+  /* Section label above a display heading: tracked out, amber, small. */
   .kicker {
     font-family: var(--font-mono);
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     font-weight: 500;
     line-height: 1.2;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--color-hot);
   }
@@ -163,15 +174,36 @@
     background-color: var(--color-hot);
   }
 
-  /* Mono numerals for 0:47 — tabular so columns of timecodes line up. */
+  /* Numerals for 0:47 — tabular so columns of timecodes line up. */
   .timecode {
     font-family: var(--font-mono);
-    font-size: 0.875rem;
+    font-size: 0.9375rem;
     font-weight: 500;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.02em;
     line-height: 1.2;
     color: var(--color-muted);
+  }
+
+  /* Prose link: underlined at rest. Readers over 40 don't hover to discover
+     a link, and amber-only was the sole affordance before. */
+  .link {
+    color: var(--color-hot);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in oklch, var(--color-hot) 50%, transparent);
+    text-underline-offset: 0.2em;
+  }
+
+  .link:hover {
+    text-decoration-color: var(--color-hot);
+  }
+
+  /* 44px minimum touch target for an inline link (breadcrumb, pagination,
+     "see all", footer). px on purpose: the target is a thumb, not a rem. */
+  .tap {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
   }
 
   /* Long Thai/English headlines: break anywhere rather than blow out a grid. */
@@ -190,8 +222,8 @@
     background-color: var(--color-hot);
     color: var(--color-ink);
     font-family: var(--font-mono);
-    font-size: 0.75rem;
-    letter-spacing: 0.08em;
+    font-size: 0.875rem;
+    letter-spacing: 0.04em;
     padding: 0.625rem 1rem;
   }
 

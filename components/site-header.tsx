@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { MobileNav } from "./mobile-nav";
-import { NAV } from "./nav";
+import { NavLinks } from "./nav-links";
 
 export function SiteHeader() {
   return (
@@ -32,34 +32,26 @@ export function SiteHeader() {
             className="h-8 w-8 shrink-0 rounded-full lg:h-9 lg:w-9"
           />
           <span aria-hidden className="flex items-baseline gap-1 sm:gap-1.5">
-            <span className="font-display text-[13px] leading-none font-semibold sm:text-[15px] lg:text-[17px]">
+            <span className="font-display text-sm leading-none font-semibold sm:text-base lg:text-lg">
               สรุปข่าวร้อนใน
             </span>
-            <span className="font-display text-xl leading-none font-bold text-hot sm:text-2xl lg:text-[26px]">
+            <span className="font-display text-xl leading-none font-bold text-hot sm:text-2xl lg:text-[1.625rem]">
               1
             </span>
-            <span className="font-display text-[13px] leading-none font-semibold sm:text-[15px] lg:text-[17px]">
+            <span className="font-display text-sm leading-none font-semibold sm:text-base lg:text-lg">
               นาที
             </span>
-            <span className="font-mono text-[10px] leading-none text-muted sm:text-[11px]">
+            <span className="font-mono text-[0.625rem] leading-none text-muted sm:text-xs">
               :60
             </span>
           </span>
         </Link>
 
         <nav aria-label="เมนู" className="hidden min-w-0 flex-1 lg:block">
-          <ul className="flex items-center gap-5 xl:gap-6">
-            {NAV.map(({ href, label }) => (
-              <li key={href}>
-                <Link
-                  href={href}
-                  className="block py-3 text-[15px] whitespace-nowrap text-muted transition-colors hover:text-hot"
-                >
-                  {label}
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <NavLinks
+            ulClassName="flex items-center gap-4 xl:gap-6"
+            linkClassName="block py-3 text-base whitespace-nowrap text-fg transition-colors hover:text-hot"
+          />
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-3 lg:ml-0">

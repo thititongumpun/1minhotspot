@@ -4,7 +4,9 @@ import { countWords, PLACEHOLDER, truncate, truncateSentence } from "./normalize
 import { categoryLabel, type Clip } from "./types";
 
 /** The publisher name. */
-const SITE_NAME = "สรุปข่าวร้อนใน 1 นาที";
+export const SITE_NAME = "สรุปข่าวร้อนใน 1 นาที";
+/** The visible byline and NewsArticle.author.name must be the same string. */
+export const BYLINE = "กองบรรณาธิการ 1minhotspot";
 
 /** BCP-47 tag for `inLanguage`. The site is Thai-only. */
 const LANG = "th-TH";
@@ -195,7 +197,7 @@ export function newsArticleJsonLd(clip: Clip) {
     image: [clip.thumbnail.url, `${url}/opengraph-image`],
     inLanguage: LANG,
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
-    author: organization(),
+    author: { ...organization(), name: BYLINE },
     publisher: organization(),
     articleSection: categoryLabel(clip.category),
     ...(body ? { articleBody: body, wordCount: countWords(body) } : {}),

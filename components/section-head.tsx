@@ -18,14 +18,14 @@ export function SectionHead({
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="rule-left min-w-0">
         <p className="kicker">{kicker}</p>
-        <Heading className="headline-wrap mt-1 font-display text-2xl font-bold text-fg sm:text-[28px]">
+        <Heading className="headline-wrap mt-1 font-display text-2xl font-bold text-fg sm:text-3xl">
           {heading}
         </Heading>
       </div>
       {seeAllHref && seeAllLabel ? (
         <Link
           href={seeAllHref}
-          className="shrink-0 py-1 text-base font-medium whitespace-nowrap text-hot hover:underline"
+          className="link tap shrink-0 text-base font-medium whitespace-nowrap"
         >
           {seeAllLabel}
         </Link>

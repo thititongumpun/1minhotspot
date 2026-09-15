@@ -1,4 +1,4 @@
-import { Anuphan, IBM_Plex_Mono, IBM_Plex_Sans_Thai } from "next/font/google";
+import { Anuphan, IBM_Plex_Sans_Thai } from "next/font/google";
 
 // Display / headlines.
 const anuphan = Anuphan({
@@ -16,13 +16,5 @@ const plexThai = IBM_Plex_Sans_Thai({
   variable: "--font-plex-thai",
 });
 
-// Timecodes, kickers, dates. IBM Plex Mono ships no Thai subset, so `thai` is
-// omitted here; --font-mono stacks --font-plex-thai behind it in globals.css.
-const plexMono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  display: "swap",
-  variable: "--font-plex-mono",
-});
 
-export const fontVars = `${anuphan.variable} ${plexThai.variable} ${plexMono.variable}`;
+export const fontVars = `${anuphan.variable} ${plexThai.variable}`;

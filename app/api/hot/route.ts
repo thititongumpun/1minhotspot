@@ -29,5 +29,5 @@ export async function GET(request: NextRequest) {
     url: absoluteUrl(`/news/${clip.slug}`),
   }));
 
-  return Response.json(items, { headers: { "cache-control": "public, max-age=300" } });
+  return Response.json(items, { headers: { "cache-control": "public, max-age=300, s-maxage=300, stale-while-revalidate=600" } });
 }

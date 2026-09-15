@@ -54,7 +54,7 @@ export default function AboutPage() {
             <h2 className="font-display text-xl font-bold text-fg">การแก้ไขข้อผิดพลาด</h2>
             <p className="mt-3">
               พบข้อผิดพลาดในเนื้อหาแจ้งเราได้ที่{" "}
-              <a href="mailto:ads@1minhotspot.com" className="text-hot hover:underline">
+              <a href="mailto:ads@1minhotspot.com" className="link">
                 ads@1minhotspot.com
               </a>{" "}
               เมื่อตรวจสอบแล้วพบว่าผิดจริง เราจะแก้ไขภายใน 24 ชั่วโมง พร้อมอัปเดตวันที่แก้ไขและใส่หมายเหตุการแก้ไขไว้ในบทความนั้น
@@ -77,7 +77,7 @@ export default function AboutPage() {
                   href="https://www.facebook.com/1minhotspot"
                   target="_blank"
                   rel="me noopener noreferrer"
-                  className="text-hot hover:underline"
+                  className="link"
                 >
                   facebook.com/1minhotspot
                 </a>
@@ -88,7 +88,7 @@ export default function AboutPage() {
                   href="https://www.youtube.com/@1minhotspot"
                   target="_blank"
                   rel="me noopener noreferrer"
-                  className="text-hot hover:underline"
+                  className="link"
                 >
                   youtube.com/@1minhotspot
                 </a>
@@ -100,11 +100,11 @@ export default function AboutPage() {
             <h2 className="font-display text-xl font-bold text-fg">ติดต่อเรา</h2>
             <p className="mt-3">
               มีข้อสงสัยหรือต้องการติดต่อเรื่องอื่น ส่งอีเมลมาได้ที่{" "}
-              <a href="mailto:ads@1minhotspot.com" className="text-hot hover:underline">
+              <a href="mailto:ads@1minhotspot.com" className="link">
                 ads@1minhotspot.com
               </a>{" "}
               หรือดูช่องทางเพิ่มเติมได้ที่หน้า{" "}
-              <Link href="/contact" className="text-hot hover:underline">
+              <Link href="/contact" className="link">
                 ติดต่อเรา
               </Link>
             </p>

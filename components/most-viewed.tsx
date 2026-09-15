@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import Image from "next/image";
+import { smallThumbUrl } from "@/lib/thumb-blob";
 import Link from "next/link";
 import { categoryLabel, type Clip } from "@/lib/types";
 import { formatViews, railFill } from "./format";
@@ -38,7 +39,7 @@ export function MostViewed({ clips }: { clips: Clip[] }) {
           >
             <div className="min-w-0">
               <Image
-                src={lead.thumbnail.url}
+                src={smallThumbUrl(lead.thumbnail.url)}
                 alt={lead.title}
                 width={640}
                 height={360}

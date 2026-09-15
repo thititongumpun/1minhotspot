@@ -1,5 +1,7 @@
 import type { CSSProperties } from "react";
 import Image from "next/image";
+import { preload } from "react-dom";
+import { heroThumbUrl } from "@/lib/thumb-blob";
 import Link from "next/link";
 import type { Clip } from "@/lib/types";
 import { formatDate, formatTimecode, railFill } from "./format";
@@ -15,11 +17,16 @@ export function LeadStory({
   // self-start: the lead is a fixed 16:9, so left to stretch it would grow to
   // the rundown column's height and the scrim would paint that overhang solid
   // ink — a black band under the still with the headline floating at its foot.
+  // The LCP. Without a preload the request only starts once the parser reaches
+  // the <img>, ~100 ms after the fonts; a hoisted <link rel=preload> puts it
+  // in the first wave. (Next 16's `priority` no longer does this reliably.)
+  const src = heroThumbUrl(clip.thumbnail.url);
+  preload(src, { as: "image", fetchPriority: "high" });
   return (
     <Link href={`/news/${clip.slug}`} className="on-dark group relative block self-start">
-      {/* The lead is the hero/LCP and renders wider than 640px, so it keeps the large object; only cards use the 640px sibling. */}
+      {/* The 960px sibling: the lead never renders wider than ~744 CSS px. */}
       <Image
-        src={clip.thumbnail.url}
+        src={src}
         alt={clip.title}
         width={1280}
         height={720}
@@ -33,7 +40,7 @@ export function LeadStory({
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink via-ink/55 to-transparent"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink via-ink/80 to-transparent"
       />
       <span
         aria-hidden

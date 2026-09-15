@@ -71,6 +71,10 @@ export function isArchivedUrl(url: string): boolean {
  *  the widest breakpoint, and the source is a 1080x1920 reel still that
  *  object-cover crops to 16:9 anyway — 640 is the honest ceiling, not a guess. */
 const SMALL_WIDTH = 640;
+/** The hero width: the homepage lead (60vw of 1240 = ~744 CSS px) and the
+ *  article poster (340px rail, full-bleed on phones). The 1080x1920 JPG was
+ *  183–235 KB and the LCP on both pages; 960 WebP is ~a third of that. */
+const HERO_WIDTH = 960;
 
 /**
  * The 640px WebP sibling of an archived thumbnail — a NAMING CONVENTION, not a
@@ -88,12 +92,34 @@ const SMALL_WIDTH = 640;
  * row BEFORE a build that calls this reaches production, or those cards 404.
  */
 export function smallThumbUrl(url: string): string {
+  return siblingUrl(url, SMALL_WIDTH);
+}
+
+/** The 960px WebP sibling — same convention as smallThumbUrl, for the two
+ *  eager hero slots only.
+ *
+ *  Gated on HERO_THUMBS=1 because the sibling does not exist for clips
+ *  archived before 2026-09-16 until `scripts/small-thumbs.ts --apply --width 960`
+ *  has run — and the R2 keys are Wrangler secrets, not in .env.local, so the
+ *  backfill is a deliberate step. Until the var is set every hero keeps the
+ *  large JPG; ingest already writes both siblings for new clips. Set it as a
+ *  wrangler var (and in .env.local for builds) once the backfill is done. */
+export function heroThumbUrl(url: string): string {
+  return process.env.HERO_THUMBS === "1" ? heroSiblingUrl(url) : url;
+}
+
+/** Ungated: the key the backfill writes, whether or not the site serves it yet. */
+export function heroSiblingUrl(url: string): string {
+  return siblingUrl(url, HERO_WIDTH);
+}
+
+function siblingUrl(url: string, width: number): string {
   const host = process.env.R2_PUBLIC_HOST;
   if (!host) return url;
   try {
     const u = new URL(url);
     const id = /^\/thumbs\/(.+)\.jpg$/.exec(u.pathname)?.[1];
-    return u.hostname === host && id ? `https://${host}/thumbs/${id}-${SMALL_WIDTH}.webp` : url;
+    return u.hostname === host && id ? `https://${host}/thumbs/${id}-${width}.webp` : url;
   } catch {
     return url;
   }
@@ -108,7 +134,20 @@ export function smallThumbUrl(url: string): string {
  * upscaling invents no detail (same reasoning as fetchLargestStill's note).
  */
 export async function putSmallThumb(id: string, source: ArrayBuffer): Promise<void> {
-  await putObject(`thumbs/${id}-${SMALL_WIDTH}.webp`, await resizeToWebp(source), "image/webp");
+  await putThumbSibling(id, source, SMALL_WIDTH);
+}
+
+export async function putHeroThumb(id: string, source: ArrayBuffer): Promise<void> {
+  await putThumbSibling(id, source, HERO_WIDTH);
+}
+
+/** Both siblings from one source buffer — what ingest writes per new clip. */
+export async function putThumbSiblings(id: string, source: ArrayBuffer): Promise<void> {
+  await Promise.all([putSmallThumb(id, source), putHeroThumb(id, source)]);
+}
+
+async function putThumbSibling(id: string, source: ArrayBuffer, width: number): Promise<void> {
+  await putObject(`thumbs/${id}-${width}.webp`, await resizeToWebp(source, width), "image/webp");
 }
 
 /**
@@ -116,12 +155,12 @@ export async function putSmallThumb(id: string, source: ArrayBuffer): Promise<vo
  * resize through the Images binding wired in wrangler.jsonc. Everywhere else
  * (scripts/small-thumbs.ts, next dev) that binding is absent and sharp runs.
  */
-async function resizeToWebp(source: ArrayBuffer): Promise<ArrayBuffer | Buffer> {
+async function resizeToWebp(source: ArrayBuffer, width: number): Promise<ArrayBuffer | Buffer> {
   const images = await workersImages();
   if (images) {
     const out = await images
       .input(new Blob([source]).stream())
-      .transform({ width: SMALL_WIDTH, fit: "scale-down" })
+      .transform({ width, fit: "scale-down" })
       .output({ format: "image/webp", quality: 72 });
     return out.response().arrayBuffer();
   }
@@ -130,7 +169,7 @@ async function resizeToWebp(source: ArrayBuffer): Promise<ArrayBuffer | Buffer> 
   const sharpPackageName = "sharp";
   const sharp = (await import(sharpPackageName)).default;
   return sharp(Buffer.from(source))
-    .resize({ width: SMALL_WIDTH, withoutEnlargement: true })
+    .resize({ width, withoutEnlargement: true })
     .webp({ quality: 72 })
     .toBuffer();
 }
@@ -217,7 +256,7 @@ export async function blobThumbnails(clips: Clip[]): Promise<Clip[]> {
         // just made. A missing small object degrades to a 404 on ONE card;
         // losing the large one means the clip re-spends an upload slot forever.
         try {
-          await putSmallThumb(clip.id, bytes);
+          await putThumbSiblings(clip.id, bytes);
         } catch (err) {
           console.warn(`[thumb-blob] small ${clip.id}: ${(err as Error).message}`);
         }

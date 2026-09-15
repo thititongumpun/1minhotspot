@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getClips } from "@/lib/clips";
-import { absoluteUrl, breadcrumbJsonLd, pageOpenGraph } from "@/lib/seo";
+import { absoluteUrl, breadcrumbJsonLd, collectionPageJsonLd, pageOpenGraph } from "@/lib/seo";
 import { JsonLd } from "@/components/json-ld";
 import { RundownRow } from "@/components/rundown-row";
 import { SectionHead } from "@/components/section-head";
@@ -16,6 +16,9 @@ import { SectionHead } from "@/components/section-head";
 export const revalidate = 3600;
 
 const PER_PAGE = 100;
+const TITLE = "คลิปข่าวทั้งหมด";
+const DESCRIPTION =
+  "รวมคลิปข่าวสั้นทั้งหมดจากสรุปข่าวร้อนใน 1 นาที เรียงจากใหม่ไปเก่า ครบทุกหมวดข่าว";
 
 /** `?page=` -> a 1-based page number, or 1. A junk value is page 1, not a 404:
  *  a crawler following a mangled link should land on the list, not an error. */
@@ -39,9 +42,8 @@ export async function generateMetadata({ searchParams }: PageProps<"/videos">): 
   const page = pageNumber((await searchParams).page);
   const total = Math.max(1, Math.ceil((await getClips()).length / PER_PAGE));
   return {
-    title: page > 1 ? `คลิปข่าวทั้งหมด — หน้า ${page}` : "คลิปข่าวทั้งหมด",
-    description:
-      "รวมคลิปข่าวสั้นทั้งหมดจากสรุปข่าวร้อนใน 1 นาที เรียงจากใหม่ไปเก่า ครบทุกหมวดข่าว",
+    title: page > 1 ? `${TITLE} — หน้า ${page}` : TITLE,
+    description: DESCRIPTION,
     alternates: { canonical: pageUrl(page) },
     openGraph: pageOpenGraph(pageUrl(page)),
     // Next 16 emits <link rel="prev"/"next"> from this (metadata-interface.d.ts).
@@ -64,13 +66,20 @@ export default async function VideosPage({ searchParams }: PageProps<"/videos">)
   return (
     <section className="container-hot py-8 lg:py-12">
       <JsonLd
-        data={breadcrumbJsonLd([
-          { name: "หน้าแรก", url: absoluteUrl("/") },
-          { name: "คลิปทั้งหมด", url: absoluteUrl("/videos") },
-        ])}
+        data={[
+          // Page 1 only: collectionPageJsonLd() takes a path and absoluteUrl()
+          // would percent-encode `?page=` (see pageUrl above).
+          ...(page === 1
+            ? [collectionPageJsonLd({ name: TITLE, description: DESCRIPTION, path: "/videos", clips: shown })]
+            : []),
+          breadcrumbJsonLd([
+            { name: "หน้าแรก", url: absoluteUrl("/") },
+            { name: "คลิปทั้งหมด", url: absoluteUrl("/videos") },
+          ]),
+        ]}
       />
-      <nav aria-label="เส้นทางนำทาง" className="mb-6 flex items-center gap-2 text-sm">
-        <Link href="/" className="whitespace-nowrap text-muted hover:text-hot">
+      <nav aria-label="เส้นทางนำทาง" className="mb-6 flex items-center gap-2 text-base">
+        <Link href="/" className="tap whitespace-nowrap text-muted hover:text-hot">
           หน้าแรก
         </Link>
         <span aria-hidden className="text-muted">
@@ -95,16 +104,16 @@ export default async function VideosPage({ searchParams }: PageProps<"/videos">)
       </ol>
 
       {(page > 1 || page < total) && (
-        <nav aria-label="แบ่งหน้า" className="mt-8 flex items-center justify-between text-sm">
+        <nav aria-label="แบ่งหน้า" className="mt-8 flex items-center justify-between text-base">
           {page > 1 ? (
-            <Link href={pagePath(page - 1)} rel="prev" className="inline-block py-2 text-hot hover:underline">
+            <Link href={pagePath(page - 1)} rel="prev" className="link tap">
               หน้าก่อนหน้า
             </Link>
           ) : (
             <span />
           )}
           {page < total ? (
-            <Link href={pagePath(page + 1)} rel="next" className="inline-block py-2 text-hot hover:underline">
+            <Link href={pagePath(page + 1)} rel="next" className="link tap">
               หน้าถัดไป
             </Link>
           ) : (

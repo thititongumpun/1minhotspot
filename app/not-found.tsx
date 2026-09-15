@@ -12,7 +12,7 @@ export default function NotFound() {
         </h1>
         <p className="mt-3 text-muted">ขออภัย เราไม่พบหน้าที่คุณต้องการ</p>
         <p className="mt-6">
-          <Link href="/" className="text-hot hover:underline">
+          <Link href="/" className="link tap">
             กลับหน้าแรก
           </Link>
         </p>

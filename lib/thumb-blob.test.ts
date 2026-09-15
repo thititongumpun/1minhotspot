@@ -1,6 +1,6 @@
 // Self-check: pnpm exec tsx lib/thumb-blob.test.ts. Exits 0 when green. No network.
 import assert from "node:assert/strict";
-import { isArchivedUrl, isVercelBlobUrl, largestFormat, smallThumbUrl } from "./thumb-blob";
+import { isArchivedUrl, isVercelBlobUrl, largestFormat, smallThumbUrl, heroThumbUrl, heroSiblingUrl } from "./thumb-blob";
 import { pickFormat } from "./providers/facebook";
 
 // Shape Graph returns for `fields=format`: one preferred frame at several sizes.
@@ -43,6 +43,14 @@ assert.equal(smallThumbUrl("https://thumbs.example.com/other/123.jpg"), "https:/
 assert.equal(smallThumbUrl("not a url"), "not a url", "a malformed URL must not throw");
 assert.equal(smallThumbUrl("https://thumbs.example.com/thumbs/123-640.webp"), "https://thumbs.example.com/thumbs/123-640.webp", "idempotent: a small URL is not re-derived");
 console.log("ok  smallThumbUrl: R2 large -> sibling, everything else untouched");
+
+assert.equal(heroThumbUrl("https://thumbs.example.com/thumbs/123.jpg"), "https://thumbs.example.com/thumbs/123.jpg", "HERO_THUMBS unset -> the large JPG, never a 404 sibling");
+process.env.HERO_THUMBS = "1";
+assert.equal(heroThumbUrl("https://thumbs.example.com/thumbs/123.jpg"), "https://thumbs.example.com/thumbs/123-960.webp");
+assert.equal(heroThumbUrl("https://scontent-bkk1-1.xx.fbcdn.net/v/t15/1.jpg?oe=68B0"), "https://scontent-bkk1-1.xx.fbcdn.net/v/t15/1.jpg?oe=68B0", "fbcdn rows have no hero sibling");
+delete process.env.HERO_THUMBS;
+assert.equal(heroSiblingUrl("https://thumbs.example.com/thumbs/123.jpg"), "https://thumbs.example.com/thumbs/123-960.webp", "the backfill key is not gated");
+console.log("ok  heroThumbUrl: gated on HERO_THUMBS, same convention at 960");
 
 delete process.env.R2_PUBLIC_HOST;
 assert.equal(isArchivedUrl("https://thumbs.example.com/thumbs/1.jpg"), false, "no R2 host configured -> not archived");

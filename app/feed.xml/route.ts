@@ -1,5 +1,5 @@
 import { getClips } from "@/lib/clips";
-import { absoluteUrl, clipDescription, escapeXml, SITE_DESCRIPTION } from "@/lib/seo";
+import { absoluteUrl, clipDescription, escapeXml, shouldNoindex, SITE_DESCRIPTION } from "@/lib/seo";
 import { categoryLabel } from "@/lib/types";
 
 export const revalidate = 3600;
@@ -11,6 +11,9 @@ const MAX_ITEMS = 50;
 export async function GET() {
   const items = (await getClips())
     .filter((clip) => clip.source !== "sample" || process.env.NODE_ENV !== "production")
+    // Same predicate as both sitemaps: Publisher Center ingests this feed, and a
+    // noindexed page must not reach it through the back door.
+    .filter((clip) => !shouldNoindex(clip))
     .slice(0, MAX_ITEMS);
 
   const entries = items.map((clip) => {

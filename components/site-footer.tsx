@@ -25,7 +25,7 @@ export function SiteFooter() {
         {/* Channel identity */}
         <div className="max-w-sm">
           <div className="flex items-baseline gap-2 whitespace-nowrap">
-            <span className="font-display text-[15px] leading-none font-semibold">
+            <span className="font-display text-base leading-none font-semibold">
               สรุปข่าวร้อนใน
             </span>
             <span
@@ -34,27 +34,27 @@ export function SiteFooter() {
             >
               1
             </span>
-            <span className="font-display text-[15px] leading-none font-semibold">
+            <span className="font-display text-base leading-none font-semibold">
               นาที
             </span>
-            <span aria-hidden className="font-mono text-[11px] leading-none text-muted">
+            <span aria-hidden className="font-mono text-xs leading-none text-muted">
               :60
             </span>
           </div>
-          <p className="mt-4 text-sm text-muted">ช่องข่าวคลิปสั้น อัปเดตทุกวัน</p>
-          <p className="mt-1 text-sm text-muted">ข่าวเร็ว จบในนาทีเดียว</p>
+          <p className="mt-4 text-base text-muted">ช่องข่าวคลิปสั้น อัปเดตทุกวัน</p>
+          <p className="mt-1 text-base text-muted">ข่าวเร็ว จบในนาทีเดียว</p>
           <p className="timecode mt-5">กรุงเทพมหานคร ประเทศไทย</p>
         </div>
 
         {/* Menu duplication */}
         <nav aria-label="เมนู">
           <p className="kicker">เมนู</p>
-          <ul className="mt-4 space-y-2">
+          <ul className="mt-2">
             {NAV.map(({ href, label }) => (
               <li key={href}>
                 <Link
                   href={href}
-                  className="inline-block py-1 text-[15px] whitespace-nowrap text-muted transition-colors hover:text-hot"
+                  className="tap text-base whitespace-nowrap text-fg transition-colors hover:text-hot"
                 >
                   {label}
                 </Link>
@@ -66,14 +66,14 @@ export function SiteFooter() {
         {/* Socials + ad sales */}
         <div>
           <p className="kicker">ติดตามเรา</p>
-          <ul className="mt-4 space-y-2">
+          <ul className="mt-2">
             {SOCIALS.map(({ label, href }) => (
               <li key={label}>
                 <a
                   href={href}
                   rel="me noopener noreferrer"
                   target="_blank"
-                  className="inline-block py-1 text-[15px] whitespace-nowrap text-muted transition-colors hover:text-hot"
+                  className="tap text-base whitespace-nowrap text-fg transition-colors hover:text-hot"
                 >
                   {label}
                 </a>
@@ -84,19 +84,19 @@ export function SiteFooter() {
           <p className="kicker mt-8">ติดต่อโฆษณา</p>
           <a
             href="mailto:ads@1minhotspot.com"
-            className="mt-4 inline-block font-mono text-sm whitespace-nowrap text-fg transition-colors hover:text-hot"
+            className="tap mt-2 text-base whitespace-nowrap text-fg underline underline-offset-4 transition-colors hover:text-hot"
           >
             ads@1minhotspot.com
           </a>
 
           <nav aria-label="ข้อมูลเว็บไซต์">
             <p className="kicker mt-8">ข้อมูลเว็บไซต์</p>
-            <ul className="mt-4 space-y-2">
+            <ul className="mt-2">
               {SITE_LINKS.map(({ label, href }) => (
                 <li key={href}>
                   <Link
                     href={href}
-                    className="inline-block py-1 text-[15px] whitespace-nowrap text-muted transition-colors hover:text-hot"
+                    className="tap text-base whitespace-nowrap text-fg transition-colors hover:text-hot"
                   >
                     {label}
                   </Link>

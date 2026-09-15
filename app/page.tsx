@@ -53,7 +53,7 @@ export default async function Home() {
             )}
           </div>
           <div>
-            <SectionHead kicker="01 — ข่าวกำลังมา" heading="ข่าวเด่นวันนี้" seeAllHref="/videos" seeAllLabel="ดูทั้งหมด" />
+            <SectionHead kicker="ข่าวกำลังมา" heading="ข่าวเด่นวันนี้" seeAllHref="/videos" seeAllLabel="ดูทั้งหมด" />
             <ol aria-label="ข่าวเด่นวันนี้" className="mt-4 divide-y divide-hairline">
               {rundown.map((clip, i) => (
                 <RundownRow key={clip.id} clip={clip} index={i + 1} />

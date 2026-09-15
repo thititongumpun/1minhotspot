@@ -2,6 +2,8 @@ import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { preload } from "react-dom";
+import { heroThumbUrl } from "@/lib/thumb-blob";
 import { getClip, getClips, getClipsByCategory } from "@/lib/clips";
 import {
   absoluteUrl,
@@ -11,6 +13,7 @@ import {
   pageOpenGraph,
   shouldNoindex,
   videoObjectJsonLd,
+  BYLINE,
 } from "@/lib/seo";
 import { PLACEHOLDER } from "@/lib/normalize";
 import { categoryLabel } from "@/lib/types";
@@ -89,11 +92,16 @@ export default async function ArticlePage({ params }: PageProps<"/news/[slug]">)
     .map((p) => p.trim())
     .filter((p) => p.length > 0 && !(source && p === PLACEHOLDER));
   const related = (await getClipsByCategory(clip.category))
-    .filter((c) => c.slug !== clip.slug)
+    .filter((c) => c.slug !== clip.slug && !shouldNoindex(c))
     .slice(0, 4);
 
   const label = categoryLabel(clip.category);
   const sourceHost = new URL(clip.permalink).hostname.replace(/^www\./, "");
+  // The poster is the article's LCP. Resolve the 960px sibling here (the
+  // embed is a client component and cannot read server env) and preload it so
+  // the request starts in the first wave — see components/lead-story.tsx.
+  const poster = { ...clip.thumbnail, url: heroThumbUrl(clip.thumbnail.url) };
+  preload(poster.url, { as: "image", fetchPriority: "high" });
 
   return (
     <>
@@ -110,15 +118,12 @@ export default async function ArticlePage({ params }: PageProps<"/news/[slug]">)
       />
 
       <article className="container-hot py-8 lg:py-12">
-        <nav aria-label="เส้นทางนำทาง" className="timecode flex items-center gap-2">
-          <Link href="/" className="whitespace-nowrap hover:text-hot">
+        <nav aria-label="เส้นทางนำทาง" className="flex flex-wrap items-center gap-x-2 text-base text-muted">
+          <Link href="/" className="tap whitespace-nowrap hover:text-hot">
             หน้าแรก
           </Link>
           <span aria-hidden>/</span>
-          <Link
-            href={`/category/${clip.category}`}
-            className="whitespace-nowrap text-hot hover:underline"
-          >
+          <Link href={`/category/${clip.category}`} className="link tap whitespace-nowrap">
             {label}
           </Link>
         </nav>
@@ -132,7 +137,7 @@ export default async function ArticlePage({ params }: PageProps<"/news/[slug]">)
               page, not only in JSON-LD. อัปเดต only when it lands on a
               different Bangkok day, so the two dates never read the same. */}
           <p className="timecode mt-4 flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span>โดย กองบรรณาธิการ 1minhotspot</span>
+            <span>โดย {BYLINE}</span>
             <span aria-hidden>·</span>
             <time dateTime={clip.publishedAt}>เผยแพร่เมื่อ {formatDate(clip.publishedAt)}</time>
             {formatDate(clip.updatedAt) !== formatDate(clip.publishedAt) && (
@@ -184,14 +189,14 @@ export default async function ArticlePage({ params }: PageProps<"/news/[slug]">)
           ) : null}
 
           <aside className="lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-6">
-            <ClipEmbed src={clip.embedUrl} title={clip.title} poster={clip.thumbnail} />
+            <ClipEmbed src={clip.embedUrl} title={clip.title} poster={poster} />
             <p className="timecode mt-3">ความยาว {formatTimecode(clip.durationSec)}</p>
-            <p className="mt-3 text-sm">
+            <p className="mt-3 text-base">
               <a
                 href={clip.permalink}
                 target="_blank"
                 rel="noopener"
-                className="text-hot hover:underline"
+                className="link"
               >
                 รับชมบน {sourceHost}
               </a>
@@ -202,7 +207,7 @@ export default async function ArticlePage({ params }: PageProps<"/news/[slug]">)
               hold only the row-spanning aside and grid would hand it half the
               embed's height — push the body up into row 1 instead. */}
           <div
-            className={`max-w-[68ch] space-y-5 text-[17px] leading-[1.75] lg:text-lg lg:leading-[1.75] lg:col-start-1 ${lead ? "lg:row-start-2" : "lg:row-start-1"}`}
+            className={`max-w-[68ch] space-y-5 text-lg leading-[1.75] lg:col-start-1 ${lead ? "lg:row-start-2" : "lg:row-start-1"}`}
           >
             {rest.map((paragraph, i) => (
               <p key={i} className="headline-wrap">
@@ -242,12 +247,12 @@ export default async function ArticlePage({ params }: PageProps<"/news/[slug]">)
                     </p>
                   ))}
                 </blockquote>
-                <figcaption className="mt-3 text-sm">
+                <figcaption className="mt-3 text-base">
                   <a
                     href={source.url}
                     target="_blank"
                     rel="noopener"
-                    className="text-hot hover:underline"
+                    className="link"
                   >
                     อ่านต่อที่ {source.publisher}
                   </a>
@@ -263,20 +268,20 @@ export default async function ArticlePage({ params }: PageProps<"/news/[slug]">)
           is our own — so labelling our own Facebook permalink as a source
           claims a provenance that does not exist. Call it what it is instead.
         */}
-        <p className="rule mt-10 max-w-[68ch] pt-4 text-sm text-muted">
+        <p className="rule mt-10 max-w-[68ch] pt-4 text-base text-muted">
           {source ? (
             <>
               แหล่งที่มา:{" "}
-              <a href={clip.permalink} target="_blank" rel="noopener" className="text-hot hover:underline">
+              <a href={clip.permalink} target="_blank" rel="noopener" className="link">
                 {sourceHost}
               </a>
               {" · "}
-              <a href={source.url} target="_blank" rel="noopener" className="text-hot hover:underline">
+              <a href={source.url} target="_blank" rel="noopener" className="link">
                 {source.publisher}
               </a>
             </>
           ) : (
-            <a href={clip.permalink} target="_blank" rel="noopener" className="text-hot hover:underline">
+            <a href={clip.permalink} target="_blank" rel="noopener" className="link">
               คลิปต้นฉบับ
             </a>
           )}
