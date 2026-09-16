@@ -242,7 +242,13 @@ export async function blobThumbnails(clips: Clip[]): Promise<Clip[]> {
   let uploads = 0;
   return Promise.all(
     kept.map(async (clip) => {
-      if (isArchivedUrl(clip.thumbnail.url)) return clip;
+      // A landscape archived thumbnail (e.g. 160x120) is Facebook's placeholder
+      // for a still it hadn't finished generating yet when we first archived it
+      // — real reel stills are always portrait (native 1080x1920). Retry those
+      // on every render instead of skipping forever, the same self-heal
+      // scripts/blob-thumbs.ts does for the manual backfill.
+      const isBadPlaceholder = clip.thumbnail.height <= clip.thumbnail.width;
+      if (isArchivedUrl(clip.thumbnail.url) && !isBadPlaceholder) return clip;
       // ponytail: no negative cache — a deleted video (empty Graph `format`)
       // re-spends a slot every render. Persist a thumb_failed_at column and
       // skip for 24h if such clips ever crowd out fresh ones.
