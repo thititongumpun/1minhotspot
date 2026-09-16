@@ -22,11 +22,18 @@ const MAX_NEW_UPLOADS = 8;
  * `pickFormat` in lib/providers/facebook.ts, which picks the smallest one
  * wide enough to render (bytes on the wire). Here the still is uploaded once
  * and served from our own domain, so bigger is strictly better.
+ *
+ * Reels are always native 1080x1920 (see the `thumbnails` comment in
+ * facebook.ts), so a genuine `format` entry is always portrait. Facebook
+ * sometimes hands back a landscape ~160x120 entry instead — its generic
+ * "no still available" placeholder, not a real frame — for reels it hasn't
+ * finished processing or has pulled. `height > width` filters that out so it
+ * never gets archived to R2 and cached immutably for a year.
  */
 export function largestFormat(formats: GraphFormat[] | undefined): Thumb | null {
   const pick = (formats ?? [])
     .filter((f): f is GraphFormat & { picture: string; width: number; height: number } =>
-      Boolean(f.picture && f.width && f.height),
+      Boolean(f.picture && f.width && f.height && f.height > f.width),
     )
     .sort((a, b) => b.width - a.width)[0];
   return pick ? { url: pick.picture, width: pick.width, height: pick.height } : null;

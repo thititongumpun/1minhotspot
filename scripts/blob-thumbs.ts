@@ -29,15 +29,24 @@ async function main() {
     process.exit(1);
   }
 
-  const rows = d1<{ id: string; slug: string; thumbnail_url: string }>(
-    "select id, slug, thumbnail_url from clips order by published_at desc",
-  );
+  const rows = d1<{
+    id: string;
+    slug: string;
+    thumbnail_url: string;
+    thumbnail_width: number;
+    thumbnail_height: number;
+  }>("select id, slug, thumbnail_url, thumbnail_width, thumbnail_height from clips order by published_at desc");
 
   let n = 0;
 
   // ponytail: sequential, ~520 rows takes minutes; add a small pool if it's ever re-run at 10x the size.
   for (const row of rows) {
-    if (isArchivedUrl(row.thumbnail_url) && !(force && isVercelBlobUrl(row.thumbnail_url))) continue;
+    // A landscape stored thumbnail (e.g. 160x120) is Facebook's placeholder for a
+    // still it couldn't generate, archived to R2 before largestFormat() rejected
+    // those — self-heal it even though it already looks "archived". Real reel
+    // stills are always portrait (native 1080x1920).
+    const isBadPlaceholder = row.thumbnail_height <= row.thumbnail_width;
+    if (isArchivedUrl(row.thumbnail_url) && !isBadPlaceholder && !(force && isVercelBlobUrl(row.thumbnail_url))) continue;
 
     try {
       const still = await fetchLargestStill(row.id);

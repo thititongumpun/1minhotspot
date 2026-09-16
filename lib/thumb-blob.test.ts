@@ -28,6 +28,19 @@ assert.equal(largestFormat(undefined), null, "missing format field -> null");
 assert.equal(largestFormat([{ filter: "x", width: 100 }]), null, "no picture -> null");
 console.log("ok  largestFormat: empty / undefined / picture-less input yields null");
 
+// Facebook's generic "no still available" placeholder: landscape, unlike every
+// real reel format (always native 1080x1920 portrait).
+const placeholderOnly = [
+  { filter: "placeholder", picture: "https://scontent-bkk1-1.xx.fbcdn.net/placeholder.jpg", width: 160, height: 120 },
+];
+assert.equal(largestFormat(placeholderOnly), null, "landscape-only formats -> null, never archived");
+assert.equal(
+  largestFormat([...placeholderOnly, ...formats])!.width,
+  1080,
+  "a landscape placeholder must not beat a real portrait format",
+);
+console.log("ok  largestFormat: rejects the landscape placeholder format");
+
 process.env.R2_PUBLIC_HOST = "thumbs.example.com";
 assert.equal(isArchivedUrl("https://thumbs.example.com/thumbs/1.jpg"), true, "R2 host is archived");
 assert.equal(isArchivedUrl("https://abc.public.blob.vercel-storage.com/thumbs/1.jpg"), true, "retired Blob host still archived");
