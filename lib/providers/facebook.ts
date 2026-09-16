@@ -213,3 +213,34 @@ export async function fetchFacebookVideo(id: string): Promise<Clip | null> {
     return null;
   }
 }
+
+/**
+ * Ask Facebook to re-scrape a URL's Open Graph tags (Sharing Debugger's
+ * "Scrape again", via POST /?id=<url>&scrape=true). n8n comments the /v/<id>
+ * link on a Reel seconds after publish, and Facebook scrapes it right then —
+ * before the clip is archived — so the cached card is a bare
+ * "1minhotspot.com" for ~30 days. Called from /api/ingest once the rewrite has
+ * landed and the article renders. Best-effort: never throws, false on any
+ * failure, and a missing token is a silent no-op.
+ */
+export async function rescrapeUrl(url: string): Promise<boolean> {
+  const token = process.env.FB_ACCESS_TOKEN;
+  if (!token) return false;
+  const version = process.env.FB_API_VERSION || "v26.0";
+  try {
+    const res = await fetch(`https://graph.facebook.com/${version}/`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ id: url, scrape: "true", access_token: token }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) {
+      const json = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
+      throw new Error(`Facebook Graph ${res.status}: ${json.error?.message ?? res.statusText}`);
+    }
+    return true;
+  } catch (err) {
+    console.error(`[facebook] rescrape ${url}:`, (err as Error).message);
+    return false;
+  }
+}

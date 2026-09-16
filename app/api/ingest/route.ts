@@ -1,6 +1,8 @@
 import { timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { revalidateClipLists } from "@/lib/clips";
+import { rescrapeUrl } from "@/lib/providers/facebook";
+import { absoluteUrl } from "@/lib/seo";
 import { getStoredRefById, upsertScript, type ScriptInput } from "@/lib/store";
 
 // Caching: nothing to opt out of. Next 16 does not cache Route Handlers by
@@ -113,5 +115,10 @@ export async function POST(request: Request): Promise<Response> {
     revalidateClipLists(ref.category);
   }
 
-  return json({ ok: true, videoId }, 200);
+  // The Reel's first comment links /v/<id>, and Facebook scraped that link
+  // before the article existed — the cached card is a bare domain. Now that
+  // the page renders with its real title and image, ask Facebook to look again.
+  const rescraped = await rescrapeUrl(absoluteUrl(`/v/${videoId}`));
+
+  return json({ ok: true, videoId, rescraped }, 200);
 }
