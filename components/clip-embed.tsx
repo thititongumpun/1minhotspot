@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Poster = { url: string; width: number; height: number };
 
@@ -17,6 +17,15 @@ export function ClipEmbed({ src, title, poster }: { src: string; title: string; 
   const embedSrc = isFacebook ? withWidth(src, 320) : src;
   const [playing, setPlaying] = useState(false);
   const [ready, setReady] = useState(false);
+
+  // A blocked or blank iframe (ad-blocker, deleted video) may never fire
+  // onLoad. Clear the "กำลังโหลดคลิป" skeleton anyway so the box stops looking
+  // stuck; the "รับชมบน facebook.com" link right under the player is the fallback.
+  useEffect(() => {
+    if (!playing || ready) return;
+    const t = setTimeout(() => setReady(true), 8000);
+    return () => clearTimeout(t);
+  }, [playing, ready]);
 
   return (
     <div

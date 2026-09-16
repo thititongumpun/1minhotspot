@@ -49,7 +49,10 @@ export async function generateMetadata({
   const description = clipDescription(clip);
 
   return {
-    title: clip.title,
+    // Bare headline, no "| สรุปข่าวร้อนใน 1 นาที" template: the 20-char suffix
+    // ate the headline on mobile SERPs, and Google shows the site name on its
+    // own from og:site_name + the WebSite JSON-LD. Listing pages keep the template.
+    title: { absolute: clip.title },
     description,
     alternates: { canonical: url },
     // Live and linked, but out of the index — a thin no-rewrite page or a
@@ -96,7 +99,10 @@ export default async function ArticlePage({ params }: PageProps<"/news/[slug]">)
     .slice(0, 4);
 
   const label = categoryLabel(clip.category);
-  const sourceHost = new URL(clip.permalink).hostname.replace(/^www\./, "");
+  // A malformed permalink must not 500 the article; fall back to the provider name.
+  const sourceHost = URL.canParse(clip.permalink)
+    ? new URL(clip.permalink).hostname.replace(/^www\./, "")
+    : clip.source;
   // The poster is the article's LCP. Resolve the 960px sibling here (the
   // embed is a client component and cannot read server env) and preload it so
   // the request starts in the first wave — see components/lead-story.tsx.
