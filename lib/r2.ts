@@ -20,6 +20,59 @@ export function publicUrl(key: string): string {
   return `https://${host}/${key}`;
 }
 
+export function hasCachePurgeCredentials(): boolean {
+  const e = process.env;
+  return Boolean(e.CLOUDFLARE_CACHE_PURGE_TOKEN && e.CLOUDFLARE_ZONE_ID);
+}
+
+let warnedPurge = false;
+
+/**
+ * Best-effort purge of Cloudflare's edge cache for a freshly (re)written R2
+ * object. The immutable, 1-year cache-control on every object (below) is
+ * correct for a key that never changes, but it is exactly what makes the
+ * self-heal path in thumb-blob.ts invisible at the edge: overwriting
+ * `thumbs/<id>.jpg` in R2 does nothing to whatever the CDN already cached
+ * for that URL, so without this every self-heal would silently keep serving
+ * the old (broken) bytes until someone manually purges.
+ *
+ * A dedicated token, not the CLOUDFLARE_API_TOKEN already used by Workers
+ * Builds for wrangler/D1 access: that one is Account-scoped, this needs
+ * Zone > Cache Purge on the zone serving R2_PUBLIC_HOST — reusing the name
+ * would silently 403 the moment someone points CLOUDFLARE_ZONE_ID at it.
+ *
+ * Never throws: a skipped or failed purge means the edge serves a stale
+ * copy for a while longer, not a broken upload — the write already
+ * succeeded, and that must never be undone by a purge failure. A hung
+ * api.cloudflare.com would otherwise block every putObject() call — and
+ * therefore every page prerender through blobThumbnails() — so it's capped
+ * at 5s.
+ */
+export async function purgeCache(urls: string[]): Promise<void> {
+  if (urls.length === 0) return;
+  const { CLOUDFLARE_CACHE_PURGE_TOKEN, CLOUDFLARE_ZONE_ID } = process.env;
+  if (!hasCachePurgeCredentials()) {
+    if (!warnedPurge) {
+      warnedPurge = true;
+      console.warn(
+        "[r2] no CLOUDFLARE_CACHE_PURGE_TOKEN/CLOUDFLARE_ZONE_ID — overwritten objects stay cached at the edge until purged manually.",
+      );
+    }
+    return;
+  }
+  try {
+    const res = await fetch(`https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/purge_cache`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${CLOUDFLARE_CACHE_PURGE_TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ files: urls }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) console.warn(`[r2] cache purge ${res.status}: ${await res.text().catch(() => "")}`);
+  } catch (err) {
+    console.warn(`[r2] cache purge: ${(err as Error).message}`);
+  }
+}
+
 let client: AwsClient | undefined;
 
 /**
@@ -54,5 +107,7 @@ export async function putObject(key: string, body: ArrayBuffer | Uint8Array, con
     },
   );
   if (!res.ok) throw new Error(`R2 put ${key}: ${res.status} ${await res.text().catch(() => "")}`);
-  return publicUrl(key);
+  const url = publicUrl(key);
+  await purgeCache([url]);
+  return url;
 }
