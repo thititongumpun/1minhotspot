@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { archiveFreshClip, getClips, revalidateClipLists } from "@/lib/clips";
+import { absoluteUrl } from "@/lib/seo";
 import { getStoredRefById } from "@/lib/store";
 
 /**
@@ -28,7 +29,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     // snapshot — flush them so the news sitemap carries it on the next crawl.
     revalidateClipLists(fresh.category);
   }
-  // A hand-built 301, not permanentRedirect(): that emits 308, which link
-  // scrapers (Facebook, LINE) handle less reliably than the classic 301.
-  return new Response(null, { status: 301, headers: { location: `/news/${encodeURIComponent(slug)}` } });
+  // A hand-built 301, not permanentRedirect(): that emits 308 with a relative
+  // Location, and link scrapers (Facebook, LINE) follow an absolute 301 most
+  // reliably. absoluteUrl() percent-encodes the Thai slug.
+  return new Response(null, { status: 301, headers: { location: absoluteUrl(`/news/${slug}`) } });
 }
