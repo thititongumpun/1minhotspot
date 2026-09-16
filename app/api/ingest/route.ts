@@ -115,10 +115,13 @@ export async function POST(request: Request): Promise<Response> {
     revalidateClipLists(ref.category);
   }
 
-  // The Reel's first comment links /v/<id>, and Facebook scraped that link
-  // before the article existed — the cached card is a bare domain. Now that
-  // the page renders with its real title and image, ask Facebook to look again.
+  // The Reel's first comment links the article — /v/<id> historically, the
+  // /news/<slug> URL n8n reads from /v/'s Location header now — and Facebook
+  // scraped it before the rewrite existed, so the cached card carries the raw
+  // caption (or, before robots.txt allowed /v/, a bare domain). Ask Facebook to
+  // look at both again now that the page renders with its real title.
   const rescraped = await rescrapeUrl(absoluteUrl(`/v/${videoId}`));
+  if (ref) await rescrapeUrl(absoluteUrl(`/news/${ref.slug}`));
 
   return json({ ok: true, videoId, rescraped }, 200);
 }
