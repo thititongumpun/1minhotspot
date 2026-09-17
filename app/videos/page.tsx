@@ -11,7 +11,7 @@ import { SectionHead } from "@/components/section-head";
 // (page.md: "searchParams is a Request-time API"), so revalidate no longer
 // gives it a static shell. It stays cheap because getClips() rides load()'s
 // hour-long Data Cache — the render is a slice of an already-cached array, not
-// a Neon read. If this ever shows up in function time, move to
+// a D1 read. If this ever shows up in function time, move to
 // /videos/page/[n] segments with generateStaticParams.
 export const revalidate = 3600;
 

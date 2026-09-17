@@ -6,8 +6,9 @@
 -- site emits 404s within a day and the sitemap shrinks in lockstep. This table
 -- accumulates clips forever and is unioned with the live feed at read time.
 --
--- Translated from db/schema.sql (Postgres). Column names and order are
--- identical so lib/store.ts toClip() needs no changes. Dialect differences:
+-- Translated from the original Postgres schema (removed after the D1 cutover;
+-- see git history). Column names and order are identical so lib/store.ts
+-- toClip() needs no changes. Dialect differences:
 --   timestamptz -> text holding UTC ISO 8601 ("2026-09-13T01:46:00.000Z"),
 --                  same format on every row so order by / max() / >= stay
 --                  correct lexicographically.

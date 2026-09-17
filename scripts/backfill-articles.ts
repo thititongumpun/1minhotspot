@@ -146,7 +146,7 @@ const stripPlaceholder = (text: string | null): string =>
   (text ?? "").split(PLACEHOLDER).join(" ").replace(/\s+/g, " ").trim();
 
 /**
- * The second Gemini pass described in db/schema.sql.
+ * The second Gemini pass described in db/migrations/0001_init.sql.
  *
  * Rewritten after a 5-clip trial run whose output cleared the length gate on
  * padding: four paragraphs of generic market commentary around one fact, a

@@ -107,7 +107,7 @@ async function loadUncached(): Promise<Clip[]> {
 // Data Cache for an hour, site-wide. React's cache() only dedupes within one
 // request, so every ISR regeneration of every route (828 article slugs, hourly,
 // under crawler load) re-pulled the 500-row list (~350 kB) and re-upserted the
-// live window — ~500 MB/day of Neon egress against a 12 MB database.
+// live window — ~500 MB/day of database egress against a 12 MB database.
 const load = cache(unstable_cache(loadUncached, ["clips-load"], { revalidate: 3600, tags: ["clips"] }));
 
 /**
