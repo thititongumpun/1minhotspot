@@ -55,31 +55,28 @@ The Graph `/videos` edge with `limit=50` only reaches about **16 hours** back
 `/news/[slug]` URL 404s within a day, the sitemap shrinks with it, and Google
 never accumulates an index — which defeats the point of the site.
 
-Clips are therefore persisted to Neon Postgres and `getClips()` returns the
-union of the store and the live feed. Stored rows never expire.
+Clips are therefore persisted to Cloudflare D1 (database `1minhotspot`,
+binding `DB` in `wrangler.jsonc`) and `getClips()` returns the union of the
+store and the live feed. Stored rows never expire.
 
 ### Setup
 
-```bash
-vercel link
-vercel integration add neon --yes
-vercel env pull .env.local --yes
-```
-
-Then apply the schema once:
+Apply the schema once (also run after adding a file to `db/migrations/`):
 
 ```bash
-psql "$DATABASE_URL" -f db/schema.sql
+pnpm exec wrangler d1 migrations apply 1minhotspot --remote
 ```
 
-Round-trip check against the real database:
+Round-trip check against the real database (needs a wrangler login; skips the
+remote half otherwise):
 
 ```bash
-DATABASE_URL='postgres://...' rtk pnpm exec tsx scripts/store-smoke.ts
+rtk pnpm exec tsx scripts/store-smoke.ts
 ```
 
-`DATABASE_URL` unset is a **supported** state: every `lib/store.ts` call logs a
-warning, returns empty, and the site falls back to the live feed alone.
+No D1 binding (plain `next dev`, tsx scripts) is a **supported** state: every
+`lib/store.ts` call logs a warning, returns empty, and the site falls back to
+the live feed alone.
 
 ### Two tables, one join
 
@@ -103,7 +100,7 @@ n8n sends **only the rewrite** — `videoId`, `scriptTh`, `rewrittenTitle`,
 Facebook `/videos` edge, so sending whole clips would duplicate data the site
 already owns and risk two URLs for one story.
 
-Push, not pull — Vercel cannot reach n8n / NocoDB / Postgres on the home
+Push, not pull — the Worker cannot reach n8n / NocoDB on the home
 network, so no read-side token would help.
 
 - Header `x-ingest-secret`, compared against `INGEST_SECRET` with

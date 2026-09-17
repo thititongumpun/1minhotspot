@@ -287,16 +287,16 @@ Consequences if left alone: every `/news/[slug]` URL 404s within a day, the
 sitemap shrinks in lockstep with it, and Google never accumulates an index.
 This defeats the entire point of the site.
 
-Fix: clips are **persisted** to Neon Postgres and `getClips()` returns the union
+Fix: clips are **persisted** to Cloudflare D1 and `getClips()` returns the union
 of the store and the live feed, store rows never expiring. Two write paths:
 
 - `POST /api/ingest` — n8n pushes `{video_id, title, shortsScript, link, image,
   published_at}`. Shared-secret auth compared with `crypto.timingSafeEqual`.
-  Push, not pull: Vercel cannot reach the self-hosted n8n / NocoDB / Postgres on
+  Push, not pull: the Worker cannot reach the self-hosted n8n / NocoDB on
   the home network, so no read-side token would help.
 - The Facebook provider upserts whatever it sees on each revalidate, so the
   archive grows even for clips n8n never touched.
 
-`getDb()` is lazy — Next evaluates top-level module code at build time and a
-top-level `neon(process.env.DATABASE_URL!)` crashes the build when the env var
-isn't set yet. Never wrap the client in a `Proxy`.
+The D1 binding is read per call via `getCloudflareContext()` — Next evaluates
+top-level module code at build time, where no binding exists. Never cache the
+client at module scope or wrap it in a `Proxy`.
