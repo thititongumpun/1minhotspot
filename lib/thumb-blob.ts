@@ -57,6 +57,31 @@ export async function fetchLargestStill(videoId: string): Promise<Thumb | null> 
 }
 
 /**
+ * fbcdn's "still not rendered yet" placeholder: a 160x120 GIF served under a
+ * `format` entry that still REPORTS 1080x1920 — so neither largestFormat's
+ * height > width filter nor the stored dims can catch it; only the bytes can.
+ * It is what fbcdn returns for roughly the first minute after publish, which
+ * is exactly when /v/<id> (hit by Facebook's scraper on n8n's comment) archives
+ * a fresh reel. Real stills are JPEG.
+ */
+export function isPlaceholderStill(contentType: string | null, bytes: ArrayBuffer): boolean {
+  return (
+    (contentType ?? "").startsWith("image/gif") ||
+    new TextDecoder().decode(bytes.slice(0, 4)) === "GIF8"
+  );
+}
+
+/** The still's bytes, or null when fbcdn served a placeholder or an error —
+ *  the clip then keeps its fbcdn URL and is retried on the next load. */
+export async function fetchStillBytes(still: Thumb): Promise<{ bytes: ArrayBuffer; contentType: string } | null> {
+  const res = await fetch(still.url);
+  if (!res.ok) return null;
+  const bytes = await res.arrayBuffer();
+  const contentType = res.headers.get("content-type") ?? "image/jpeg";
+  return isPlaceholderStill(contentType, bytes) ? null : { bytes, contentType };
+}
+
+/**
  * Our own archive host — R2 behind R2_PUBLIC_HOST, plus the retired Vercel
  * Blob host so rows the backfill has not reached yet still count as archived
  * (otherwise archive() would overwrite them with an expiring fbcdn URL).
@@ -257,14 +282,10 @@ export async function blobThumbnails(clips: Clip[]): Promise<Clip[]> {
       try {
         const still = await fetchLargestStill(clip.id);
         if (!still) return clip;
-        const res = await fetch(still.url);
-        if (!res.ok) return clip;
-        const bytes = await res.arrayBuffer();
-        const url = await putObject(
-          `thumbs/${clip.id}.jpg`,
-          bytes,
-          res.headers.get("content-type") ?? "image/jpeg",
-        );
+        const got = await fetchStillBytes(still);
+        if (!got) return clip;
+        const { bytes, contentType } = got;
+        const url = await putObject(`thumbs/${clip.id}.jpg`, bytes, contentType);
         // Separate try: a sharp failure must never cost us the large upload we
         // just made. A missing small object degrades to a 404 on ONE card;
         // losing the large one means the clip re-spends an upload slot forever.

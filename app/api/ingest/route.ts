@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { revalidateClipLists } from "@/lib/clips";
+import { ensureArchivedThumbnail, revalidateClipLists } from "@/lib/clips";
 import { rescrapeUrl } from "@/lib/providers/facebook";
 import { absoluteUrl } from "@/lib/seo";
 import { getStoredRefById, upsertScript, type ScriptInput } from "@/lib/store";
@@ -103,6 +103,12 @@ export async function POST(request: Request): Promise<Response> {
   if (!(await upsertScript(input))) {
     return fail(503, "store unavailable — script was not persisted, retry");
   }
+
+  // fbcdn serves a 160x120 placeholder for ~1 minute after publish, so the
+  // /v/<id> archive seconds ago may have left the row on fbcdn. Wait it out
+  // here (n8n has no scraper timeout) so the R2 still exists before the
+  // re-scrape below reads og:image — and so a reel /v/ never saw gets archived.
+  await ensureArchivedThumbnail(videoId);
 
   // Revalidate the article page on-demand instead of relying on the hourly
   // ISR sweep. No slug yet means the clip hasn't been archived — nothing

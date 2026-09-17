@@ -5,7 +5,9 @@ import { fetchFacebookClips, fetchFacebookVideo } from "./providers/facebook";
 import { fetchYouTubeClips } from "./providers/youtube";
 import { getSourceArticle } from "./providers/source-article";
 import { sampleClips } from "./sample-clips";
-import { bangkokMonthStartIso, getMostViewed, getStoredClipBySlug, getStoredClips, upsertClip } from "./store";
+import { bangkokMonthStartIso, getMostViewed, getStoredClipBySlug, getStoredClips, getStoredThumbs, upsertClip } from "./store";
+import { hasR2Credentials } from "./r2";
+import { retryUntil } from "./retry";
 
 /**
  * Every list that names a clip: the feed snapshot, the home and category pages,
@@ -19,7 +21,7 @@ export function revalidateClipLists(category: CategorySlug): void {
     revalidatePath(path);
   }
 }
-import { blobThumbnails } from "./thumb-blob";
+import { blobThumbnails, isArchivedUrl } from "./thumb-blob";
 
 const byNewest = (a: Clip, b: Clip) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt);
 
@@ -122,6 +124,37 @@ export async function archiveFreshClip(id: string): Promise<Clip | null> {
   const [blobbed] = await blobThumbnails([clip]);
   await archive([blobbed]);
   return blobbed;
+}
+
+/**
+ * Archive `id`'s still to R2 if it isn't yet, waiting out fbcdn's ~1-minute
+ * placeholder window (fetchStillBytes rejects the GIF, so blobThumbnails leaves
+ * the clip on fbcdn until the real still exists). Only /api/ingest calls this:
+ * n8n's POST has no scraper timeout, unlike /v/<id>, so it can afford to wait.
+ * Returns true once the stored row points at R2.
+ */
+export async function ensureArchivedThumbnail(id: string, attempts = 4, waitMs = 20_000): Promise<boolean> {
+  if (!hasR2Credentials()) return false;
+  try {
+    const done = await retryUntil(
+      async () => {
+        const stored = (await getStoredThumbs([id])).get(id);
+        if (stored && isArchivedUrl(stored.url)) return true;
+        const clip = await fetchFacebookVideo(id);
+        if (!clip) return false; // gone from Graph — waiting won't help
+        const [blobbed] = await blobThumbnails([clip]);
+        if (!isArchivedUrl(blobbed.thumbnail.url)) return null; // still the placeholder, retry
+        await archive([blobbed]);
+        return true;
+      },
+      attempts,
+      waitMs,
+    );
+    return done === true;
+  } catch (err) {
+    console.error("[clips] ensureArchivedThumbnail failed:", (err as Error).message);
+    return false;
+  }
 }
 
 /** The only data entry point pages use. Newest first. */

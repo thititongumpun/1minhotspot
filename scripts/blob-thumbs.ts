@@ -8,7 +8,7 @@
  * Vercel Blob store go dark when that store is paused. Both are re-fetched
  * from Graph, never from the old store. New ingests go through blobThumbnails.
  */
-import { fetchLargestStill, isArchivedUrl, isVercelBlobUrl } from "../lib/thumb-blob";
+import { fetchLargestStill, fetchStillBytes, isArchivedUrl, isVercelBlobUrl } from "../lib/thumb-blob";
 import { hasR2Credentials, putObject } from "../lib/r2";
 import { d1, lit } from "./_d1";
 import { loadEnvLocal } from "./_env";
@@ -55,20 +55,16 @@ async function main() {
         continue;
       }
 
-      const res = await fetch(still.url);
-      if (!res.ok) {
-        console.warn(`skip ${row.slug}: fetch ${res.status}`);
+      const got = await fetchStillBytes(still);
+      if (!got) {
+        console.warn(`skip ${row.slug}: fetch failed or placeholder still`);
         continue;
       }
 
       console.log(`${still.width}x${still.height}  ${row.slug}`);
 
       if (apply) {
-        const url = await putObject(
-          `thumbs/${row.id}.jpg`,
-          await res.arrayBuffer(),
-          res.headers.get("content-type") ?? "image/jpeg",
-        );
+        const url = await putObject(`thumbs/${row.id}.jpg`, got.bytes, got.contentType);
         d1(
           `update clips set thumbnail_url = ${lit(url)}, thumbnail_width = ${lit(still.width)},
              thumbnail_height = ${lit(still.height)} where id = ${lit(row.id)}`,

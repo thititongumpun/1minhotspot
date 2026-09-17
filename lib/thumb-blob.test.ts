@@ -1,6 +1,6 @@
 // Self-check: pnpm exec tsx lib/thumb-blob.test.ts. Exits 0 when green. No network.
 import assert from "node:assert/strict";
-import { isArchivedUrl, isVercelBlobUrl, largestFormat, smallThumbUrl, heroThumbUrl, heroSiblingUrl } from "./thumb-blob";
+import { isArchivedUrl, isPlaceholderStill, isVercelBlobUrl, largestFormat, smallThumbUrl, heroThumbUrl, heroSiblingUrl } from "./thumb-blob";
 import { pickFormat } from "./providers/facebook";
 
 // Shape Graph returns for `fields=format`: one preferred frame at several sizes.
@@ -68,3 +68,12 @@ console.log("ok  heroThumbUrl: gated on HERO_THUMBS, same convention at 960");
 delete process.env.R2_PUBLIC_HOST;
 assert.equal(isArchivedUrl("https://thumbs.example.com/thumbs/1.jpg"), false, "no R2 host configured -> not archived");
 console.log("ok  isArchivedUrl / isVercelBlobUrl");
+
+// fbcdn's "still not rendered yet" placeholder: a 160x120 GIF served under a
+// `format` entry that still REPORTS 1080x1920, so only the bytes give it away.
+const gif = new TextEncoder().encode("GIF89a\xa0\x00\x78\x00").buffer as ArrayBuffer;
+const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0]).buffer as ArrayBuffer;
+assert.equal(isPlaceholderStill("image/gif", gif), true, "gif content-type -> placeholder");
+assert.equal(isPlaceholderStill(null, gif), true, "GIF magic bytes -> placeholder even without a content-type");
+assert.equal(isPlaceholderStill("image/jpeg", jpeg), false, "a real JPEG still is not a placeholder");
+console.log("ok  isPlaceholderStill: GIF placeholder rejected, JPEG still accepted");
