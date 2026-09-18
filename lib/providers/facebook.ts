@@ -156,14 +156,12 @@ async function graphGet<T extends { error?: GraphResponse["error"] }>(
   token: string,
   init: RequestInit,
   query = "",
-  fields = FIELDS,
-  fallbackFields: string | null = FIELDS_WITHOUT_VIEWS,
 ): Promise<T> {
   const version = process.env.FB_API_VERSION || "v26.0";
-  const get = async (f: string): Promise<T> => {
+  const get = async (fields: string): Promise<T> => {
     const url =
       `https://graph.facebook.com/${version}/${path}` +
-      `?fields=${f}${query}&access_token=${encodeURIComponent(token)}`;
+      `?fields=${fields}${query}&access_token=${encodeURIComponent(token)}`;
     const res = await fetch(url, init);
     const json = (await res.json().catch(() => ({}))) as T;
     if (!res.ok || json.error) {
@@ -172,11 +170,10 @@ async function graphGet<T extends { error?: GraphResponse["error"] }>(
     return json;
   };
   try {
-    return await get(fields);
+    return await get(FIELDS);
   } catch (err) {
-    if (fallbackFields === null) throw err;
     console.error("[facebook] retrying without `views`:", (err as Error).message);
-    return get(fallbackFields);
+    return get(FIELDS_WITHOUT_VIEWS);
   }
 }
 
@@ -223,19 +220,42 @@ export type Engagement = { id: string; views?: number; likes?: number; comments?
  *  fields FIELDS carries, since fetchFacebookEngagement only refreshes counts. */
 const ENGAGEMENT_FIELDS = "views,likes.summary(true).limit(0),comments.summary(true).limit(0)";
 
-/** Maps a Graph `?ids=` batch response to Engagement rows. Graph returns
- *  `false`/null (not an object) for an id it can no longer resolve — deleted
- *  or unpublished — so those entries are skipped rather than producing a
- *  half-populated row. Exported for facebook.test.ts. */
-export function parseEngagement(json: Record<string, GraphVideo | undefined>): Engagement[] {
-  return Object.entries(json)
-    .filter((e): e is [string, GraphVideo] => typeof e[1] === "object" && e[1] !== null)
-    .map(([id, v]) => ({
-      id,
+export type BatchItem = { code?: number; body?: string };
+
+/** Maps a Graph Batch API response array to Engagement rows. Each item lines
+ *  up positionally with the request it answers; a deleted/unpublished id
+ *  comes back as its own non-200 item (its body unparsed JSON), so it is
+ *  skipped rather than aborting the whole chunk. `body` is itself a JSON
+ *  string Graph never gives us pre-parsed, hence the inner JSON.parse.
+ *  Logs a count of unreadable items — the only health signal this feature
+ *  has. Exported for facebook.test.ts. */
+export function parseEngagement(items: BatchItem[]): Engagement[] {
+  const out: Engagement[] = [];
+  let skipped = 0;
+  for (const item of items) {
+    let v: GraphVideo | undefined;
+    if (item.code === 200 && typeof item.body === "string") {
+      try {
+        v = JSON.parse(item.body) as GraphVideo;
+      } catch {
+        v = undefined;
+      }
+    }
+    if (!v || typeof v.id !== "string") {
+      skipped++;
+      continue;
+    }
+    out.push({
+      id: v.id,
       views: typeof v.views === "number" ? v.views : undefined,
       likes: v.likes?.summary?.total_count,
       comments: v.comments?.summary?.total_count,
-    }));
+    });
+  }
+  if (skipped > 0) {
+    console.error(`[facebook] engagement: ${skipped} of ${items.length} ids not readable`);
+  }
+  return out;
 }
 
 /** Splits `arr` into chunks of at most `size`. Exported for facebook.test.ts. */
@@ -246,28 +266,40 @@ export function chunk<T>(arr: T[], size: number): T[][] {
 }
 
 /**
- * Current views/likes/comments for an arbitrary list of video ids, via
- * Graph's `?ids=` batch endpoint (50 ids max per call, hence the chunking).
- * This is how a clip's ranking count keeps updating after it ages out of the
- * 50-item /videos feed fetchFacebookClips reads (Task 2 calls this from the
- * hourly load and writes the results to D1). Never throws: a failed chunk is
- * logged and contributes nothing, so one bad batch doesn't cost the rest.
+ * Current views/likes/comments for an arbitrary list of video ids, via the
+ * Graph Batch API (50 requests max per call, hence the chunking) rather than
+ * `?ids=`: a live probe on 2026-09-18 confirmed `?ids=` is deprecated on
+ * v26.0+ (whole call rejected, code 100). A batch also isolates a deleted
+ * reel to its own 400 item instead of failing the whole chunk the way a
+ * rejected `?ids=` call does. This is how a clip's ranking count keeps
+ * updating after it ages out of the 50-item /videos feed fetchFacebookClips
+ * reads (Task 2 calls this from the hourly load and writes the results to
+ * D1). Never throws: a failed chunk is logged and contributes nothing, so
+ * one bad batch doesn't cost the rest.
  */
 export async function fetchFacebookEngagement(ids: string[]): Promise<Engagement[]> {
   const token = process.env.FB_ACCESS_TOKEN;
   if (!token || ids.length === 0) return [];
+  const version = process.env.FB_API_VERSION || "v26.0";
   const results = await Promise.all(
     chunk(ids, 50).map(async (batch) => {
       try {
-        const json = await graphGet<Record<string, GraphVideo>>(
-          "",
-          token,
-          { cache: "no-store" },
-          "&ids=" + batch.join(","),
-          ENGAGEMENT_FIELDS,
-          null,
-        );
-        return parseEngagement(json);
+        const reqs = batch.map((id) => ({ method: "GET", relative_url: `${id}?fields=${ENGAGEMENT_FIELDS}` }));
+        const res = await fetch(`https://graph.facebook.com/${version}/`, {
+          method: "POST",
+          cache: "no-store",
+          body: new URLSearchParams({
+            batch: JSON.stringify(reqs),
+            include_headers: "false",
+            access_token: token,
+          }),
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok || !Array.isArray(json)) {
+          const message = (json as { error?: { message?: string } } | null)?.error?.message ?? res.statusText;
+          throw new Error(`Facebook Graph ${res.status}: ${message}`);
+        }
+        return parseEngagement(json as BatchItem[]);
       } catch (err) {
         console.error("[facebook] engagement chunk:", (err as Error).message);
         return [];

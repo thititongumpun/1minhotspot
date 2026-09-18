@@ -14,6 +14,11 @@ function main() {
     "drops the countless row, zero-fills the rest for max()",
   );
   assert.deepEqual(engagementBinds([]), []);
+  assert.deepEqual(
+    engagementBinds([{ id: "d", views: 3, likes: Number.NaN }]),
+    [[3, 0, 0, "d"]],
+    "a NaN sibling field doesn't ride through on `?? 0` once one field is finite",
+  );
   console.log("ok  engagementBinds: drops countless rows, zero-fills for max()");
 
   // bangkokMonthStartIso is already exercised by clips.test.ts through

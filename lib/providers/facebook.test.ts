@@ -76,28 +76,37 @@ assert.ok(!fields.includes("comments"), "comments is gone");
   assert.equal(toClip({ ...video, length: 120 }, "page"), null, "over MAX_DURATION_SEC is dropped");
   assert.equal(toClip({ ...video, format: undefined }, "page"), null, "no still is dropped");
 
-  // parseEngagement is the batch-`?ids=` response mapper: keys are ids,
-  // values are either a video object or `false` for one Graph can no longer
-  // resolve — that entry must be dropped, not turned into a row of undefined.
+  // parseEngagement is the Graph Batch API response mapper: one item per
+  // requested id, positionally aligned. A non-200 item (deleted/unpublished
+  // reel) and an unparsable/id-less body must both be skipped, not turned
+  // into a row of undefined or thrown as an error.
   assert.deepEqual(
-    parseEngagement({
-      a: { id: "a", views: 5, likes: { summary: { total_count: 2 } }, comments: { summary: { total_count: 1 } } },
-      b: false as never,
-    }),
-    [{ id: "a", views: 5, likes: 2, comments: 1 }],
-    "maps a batch-ids response and drops entries Graph returned false for",
-  );
-  assert.deepEqual(
-    parseEngagement({ c: { id: "c" } }),
-    [{ id: "c", views: undefined, likes: undefined, comments: undefined }],
-    "no summary/views on the video → undefined counts, not a thrown error",
+    parseEngagement([
+      {
+        code: 200,
+        body: JSON.stringify({
+          id: "a",
+          views: 5,
+          likes: { summary: { total_count: 2 } },
+          comments: { summary: { total_count: 1 } },
+        }),
+      },
+      { code: 400, body: "{\"error\":{}}" },
+      { code: 200, body: "not json" },
+      { code: 200, body: JSON.stringify({ id: "c" }) },
+    ]),
+    [
+      { id: "a", views: 5, likes: 2, comments: 1 },
+      { id: "c", views: undefined, likes: undefined, comments: undefined },
+    ],
+    "maps a Graph batch response, skipping non-200 and unparsable items",
   );
 
-  // chunk feeds the batch endpoint's 50-id cap.
+  // chunk feeds the batch endpoint's 50-request cap.
   assert.deepEqual(chunk([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]);
   assert.deepEqual(chunk([], 2), []);
 
-  console.log("ok  engagement: parses batch-ids responses, chunks by 50");
+  console.log("ok  engagement: parses Graph batch responses, skips failed items, chunks by 50");
 
   console.log("facebook.test.ts OK");
 }

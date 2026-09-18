@@ -365,9 +365,13 @@ export async function getMonthFacebookIds(now = new Date()): Promise<string[]> {
  *  clip, or returned nothing) are skipped — there is nothing to bump. Pure
  *  and exported so the shaping can be tested without a DB. */
 export function engagementBinds(rows: Engagement[]): [number, number, number, string][] {
+  // `?? 0` alone lets a NaN/non-number sibling field through once any one
+  // field is finite; NaN binds as NULL, max(views, NULL) is NULL, and the
+  // `not null` column aborts the whole batch. Per-field guard instead.
+  const num = (n?: number) => (typeof n === "number" && Number.isFinite(n) ? n : 0);
   return rows
     .filter((r) => [r.views, r.likes, r.comments].some((n) => typeof n === "number" && Number.isFinite(n)))
-    .map((r) => [r.views ?? 0, r.likes ?? 0, r.comments ?? 0, r.id]);
+    .map((r) => [num(r.views), num(r.likes), num(r.comments), r.id]);
 }
 
 /**
