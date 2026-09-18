@@ -10,6 +10,7 @@ export type D1PreparedStatement = {
 
 export type D1 = {
   prepare(sql: string): D1PreparedStatement;
+  batch(statements: D1PreparedStatement[]): Promise<unknown[]>;
 };
 
 /**

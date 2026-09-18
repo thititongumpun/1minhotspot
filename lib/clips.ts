@@ -1,11 +1,20 @@
 import { cache } from "react";
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import type { CategorySlug, Clip } from "./types";
-import { fetchFacebookClips, fetchFacebookVideo } from "./providers/facebook";
+import { fetchFacebookClips, fetchFacebookEngagement, fetchFacebookVideo } from "./providers/facebook";
 import { fetchYouTubeClips } from "./providers/youtube";
 import { getSourceArticle } from "./providers/source-article";
 import { sampleClips } from "./sample-clips";
-import { bangkokMonthStartIso, getMostViewed, getStoredClipBySlug, getStoredClips, getStoredThumbs, upsertClip } from "./store";
+import {
+  bangkokMonthStartIso,
+  bumpEngagement,
+  getMonthFacebookIds,
+  getMostViewed,
+  getStoredClipBySlug,
+  getStoredClips,
+  getStoredThumbs,
+  upsertClip,
+} from "./store";
 import { hasR2Credentials } from "./r2";
 import { retryUntil } from "./retry";
 
@@ -68,6 +77,19 @@ async function archive(clips: Clip[]): Promise<void> {
 }
 
 /**
+ * Re-poll Facebook for this month's counts. The /videos feed only carries 50
+ * clips (~1 day here), so a clip's views froze the day it left the feed — the
+ * "Most viewed this month" rail was ranking day-one numbers. Best-effort: any
+ * failure logs and the rail keeps its last-known counts.
+ */
+async function refreshMonthEngagement(): Promise<void> {
+  const ids = await getMonthFacebookIds();
+  if (ids.length === 0) return;
+  const rows = await fetchFacebookEngagement(ids);
+  if (rows.length > 0) await bumpEngagement(rows);
+}
+
+/**
  * The live feed unioned with the durable store, so article URLs outlive the
  * ~16h Facebook window. Reads the store BEFORE archiving; the merge below picks
  * the freshly-fetched clips up anyway.
@@ -91,6 +113,13 @@ async function loadUncached(): Promise<Clip[]> {
   // below re-applies over the stored row.
   const blobbed = await blobThumbnails(live);
   await archive(blobbed);
+  // Belt and braces: getMonthFacebookIds/fetchFacebookEngagement/bumpEngagement
+  // already never throw on their own, but load() must never throw regardless.
+  try {
+    await refreshMonthEngagement();
+  } catch (err) {
+    console.error("[clips] engagement refresh:", (err as Error).message);
+  }
   const stored = await getStoredClips();
   if (stored.length === 0) return blobbed;
 

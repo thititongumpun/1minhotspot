@@ -1,4 +1,5 @@
 import { getDb, type D1 } from "./db";
+import type { Engagement } from "./providers/facebook";
 import type { CategorySlug, Clip } from "./types";
 
 /** What n8n POSTs after it publishes a reel. Keyed by the Facebook video id. */
@@ -175,11 +176,12 @@ export async function upsertClip(clip: Clip): Promise<boolean> {
           embed_url        = excluded.embed_url,
           permalink        = excluded.permalink,
           tags             = excluded.tags,
-          -- ponytail: views freeze once a clip ages out of the 50-item feed
-          -- window; paginate /videos if that matters. Two-arg max() (scalar in
-          -- SQLite) means a stale refresh (or a clip that has aged out and
-          -- reports 0) can never claw a count back down — the live feed is the
-          -- fresher truth, but only upward.
+          -- A clip's views used to freeze once it aged out of the 50-item
+          -- /videos feed window; bumpEngagement() below now re-polls this
+          -- month's Facebook clips hourly and keeps them moving. Two-arg
+          -- max() (scalar in SQLite) means a stale refresh (or a clip that
+          -- has aged out and reports 0) can never claw a count back down —
+          -- the live feed is the fresher truth, but only upward.
           views            = max(clips.views, excluded.views),
           likes            = max(clips.likes, excluded.likes),
           comments         = max(clips.comments, excluded.comments)`,
@@ -339,6 +341,55 @@ export async function getMostViewed(n: number, now = new Date()): Promise<Clip[]
       .bind(bangkokMonthStartIso(now), Math.max(0, n))
       .all();
     return results.map(toClip);
+  });
+}
+
+/**
+ * Ids of this month's Facebook clips — the set refreshMonthEngagement()
+ * (lib/clips.ts) re-polls hourly so "Most viewed this month" keeps moving
+ * after a clip ages out of the 50-item /videos feed. Same Bangkok-month
+ * boundary as getMostViewed.
+ */
+export async function getMonthFacebookIds(now = new Date()): Promise<string[]> {
+  return run("getMonthFacebookIds", [], async (db) => {
+    const { results } = await db
+      .prepare(`select id from clips where source = 'facebook' and published_at >= ?`)
+      .bind(bangkokMonthStartIso(now))
+      .all();
+    return results.map((r) => String(r.id));
+  });
+}
+
+/** [views, likes, comments, id] bind tuples for bumpEngagement, one per row
+ *  that reports at least one finite count. Rows with none (Graph dropped the
+ *  clip, or returned nothing) are skipped — there is nothing to bump. Pure
+ *  and exported so the shaping can be tested without a DB. */
+export function engagementBinds(rows: Engagement[]): [number, number, number, string][] {
+  return rows
+    .filter((r) => [r.views, r.likes, r.comments].some((n) => typeof n === "number" && Number.isFinite(n)))
+    .map((r) => [r.views ?? 0, r.likes ?? 0, r.comments ?? 0, r.id]);
+}
+
+/**
+ * Bump views/likes/comments for `rows` toward whichever is higher, existing
+ * or incoming — same max() upward-only discipline as the upsertClip trigger
+ * above. Binding 0 for a missing count is a no-op under max(), so it never
+ * lowers a column; that's what makes `?? 0` safe here.
+ *
+ * Sent as one D1 batch (sliced to 100 statements — comfortably under D1's
+ * per-batch limits) rather than one round trip per row.
+ */
+export async function bumpEngagement(rows: Engagement[]): Promise<boolean> {
+  return run("bumpEngagement", false, async (db) => {
+    const binds = engagementBinds(rows);
+    if (binds.length === 0) return true;
+    const stmt = db.prepare(
+      `update clips set views = max(views, ?), likes = max(likes, ?), comments = max(comments, ?) where id = ?`,
+    );
+    for (let i = 0; i < binds.length; i += 100) {
+      await db.batch(binds.slice(i, i + 100).map((b) => stmt.bind(...b)));
+    }
+    return true;
   });
 }
 
