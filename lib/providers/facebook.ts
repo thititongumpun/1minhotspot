@@ -156,12 +156,14 @@ async function graphGet<T extends { error?: GraphResponse["error"] }>(
   token: string,
   init: RequestInit,
   query = "",
+  fields = FIELDS,
+  fallbackFields: string | null = FIELDS_WITHOUT_VIEWS,
 ): Promise<T> {
   const version = process.env.FB_API_VERSION || "v26.0";
-  const get = async (fields: string): Promise<T> => {
+  const get = async (f: string): Promise<T> => {
     const url =
       `https://graph.facebook.com/${version}/${path}` +
-      `?fields=${fields}${query}&access_token=${encodeURIComponent(token)}`;
+      `?fields=${f}${query}&access_token=${encodeURIComponent(token)}`;
     const res = await fetch(url, init);
     const json = (await res.json().catch(() => ({}))) as T;
     if (!res.ok || json.error) {
@@ -170,10 +172,11 @@ async function graphGet<T extends { error?: GraphResponse["error"] }>(
     return json;
   };
   try {
-    return await get(FIELDS);
+    return await get(fields);
   } catch (err) {
+    if (fallbackFields === null) throw err;
     console.error("[facebook] retrying without `views`:", (err as Error).message);
-    return get(FIELDS_WITHOUT_VIEWS);
+    return get(fallbackFields);
   }
 }
 
@@ -212,6 +215,66 @@ export async function fetchFacebookVideo(id: string): Promise<Clip | null> {
     console.error(`[facebook] video ${id}:`, (err as Error).message);
     return null;
   }
+}
+
+export type Engagement = { id: string; views?: number; likes?: number; comments?: number };
+
+/** Batch-fetch fields — just the counts, none of the article/thumbnail
+ *  fields FIELDS carries, since fetchFacebookEngagement only refreshes counts. */
+const ENGAGEMENT_FIELDS = "views,likes.summary(true).limit(0),comments.summary(true).limit(0)";
+
+/** Maps a Graph `?ids=` batch response to Engagement rows. Graph returns
+ *  `false`/null (not an object) for an id it can no longer resolve — deleted
+ *  or unpublished — so those entries are skipped rather than producing a
+ *  half-populated row. Exported for facebook.test.ts. */
+export function parseEngagement(json: Record<string, GraphVideo | undefined>): Engagement[] {
+  return Object.entries(json)
+    .filter((e): e is [string, GraphVideo] => typeof e[1] === "object" && e[1] !== null)
+    .map(([id, v]) => ({
+      id,
+      views: typeof v.views === "number" ? v.views : undefined,
+      likes: v.likes?.summary?.total_count,
+      comments: v.comments?.summary?.total_count,
+    }));
+}
+
+/** Splits `arr` into chunks of at most `size`. Exported for facebook.test.ts. */
+export function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+/**
+ * Current views/likes/comments for an arbitrary list of video ids, via
+ * Graph's `?ids=` batch endpoint (50 ids max per call, hence the chunking).
+ * This is how a clip's ranking count keeps updating after it ages out of the
+ * 50-item /videos feed fetchFacebookClips reads (Task 2 calls this from the
+ * hourly load and writes the results to D1). Never throws: a failed chunk is
+ * logged and contributes nothing, so one bad batch doesn't cost the rest.
+ */
+export async function fetchFacebookEngagement(ids: string[]): Promise<Engagement[]> {
+  const token = process.env.FB_ACCESS_TOKEN;
+  if (!token || ids.length === 0) return [];
+  const results = await Promise.all(
+    chunk(ids, 50).map(async (batch) => {
+      try {
+        const json = await graphGet<Record<string, GraphVideo>>(
+          "",
+          token,
+          { cache: "no-store" },
+          "&ids=" + batch.join(","),
+          ENGAGEMENT_FIELDS,
+          null,
+        );
+        return parseEngagement(json);
+      } catch (err) {
+        console.error("[facebook] engagement chunk:", (err as Error).message);
+        return [];
+      }
+    }),
+  );
+  return results.flat();
 }
 
 /**

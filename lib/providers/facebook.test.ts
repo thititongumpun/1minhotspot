@@ -1,6 +1,6 @@
 // Self-check, no framework: `pnpm exec tsx lib/providers/facebook.test.ts`. Exits 0 when green.
 import assert from "node:assert/strict";
-import { FIELDS_WITHOUT_VIEWS, pickFormat, toClip, type GraphVideo } from "./facebook";
+import { FIELDS_WITHOUT_VIEWS, chunk, parseEngagement, pickFormat, toClip, type GraphVideo } from "./facebook";
 
 // The four sizes Graph actually returns for a reel, smallest first.
 const GRAPH = [
@@ -75,6 +75,29 @@ assert.ok(!fields.includes("comments"), "comments is gone");
   assert.equal(toClip({ ...video, likes: undefined }, "page")?.likes, undefined, "no summary → no count");
   assert.equal(toClip({ ...video, length: 120 }, "page"), null, "over MAX_DURATION_SEC is dropped");
   assert.equal(toClip({ ...video, format: undefined }, "page"), null, "no still is dropped");
+
+  // parseEngagement is the batch-`?ids=` response mapper: keys are ids,
+  // values are either a video object or `false` for one Graph can no longer
+  // resolve — that entry must be dropped, not turned into a row of undefined.
+  assert.deepEqual(
+    parseEngagement({
+      a: { id: "a", views: 5, likes: { summary: { total_count: 2 } }, comments: { summary: { total_count: 1 } } },
+      b: false as never,
+    }),
+    [{ id: "a", views: 5, likes: 2, comments: 1 }],
+    "maps a batch-ids response and drops entries Graph returned false for",
+  );
+  assert.deepEqual(
+    parseEngagement({ c: { id: "c" } }),
+    [{ id: "c", views: undefined, likes: undefined, comments: undefined }],
+    "no summary/views on the video → undefined counts, not a thrown error",
+  );
+
+  // chunk feeds the batch endpoint's 50-id cap.
+  assert.deepEqual(chunk([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]);
+  assert.deepEqual(chunk([], 2), []);
+
+  console.log("ok  engagement: parses batch-ids responses, chunks by 50");
 
   console.log("facebook.test.ts OK");
 }
