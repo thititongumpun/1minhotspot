@@ -242,7 +242,10 @@ async function findCommentUrl(videoId: string): Promise<URL | null> {
     `https://graph.facebook.com/${version}/${encodeURIComponent(videoId)}/comments` +
     `?fields=message,from,created_time&limit=50&access_token=${encodeURIComponent(token)}`;
 
-  const res = await fetch(endpoint, { next: { revalidate: REVALIDATE } });
+  const res = await fetch(endpoint, {
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    next: { revalidate: REVALIDATE },
+  });
   const json = (await res.json()) as {
     data?: Array<{ message?: string; from?: { id?: string } }>;
   };
