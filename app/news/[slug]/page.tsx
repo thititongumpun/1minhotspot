@@ -4,7 +4,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { preload } from "react-dom";
 import { heroThumbUrl } from "@/lib/thumb-blob";
-import { getClip, getClips, getClipsByCategory } from "@/lib/clips";
+import { getClip, getClips } from "@/lib/clips";
+import { getStoredClips } from "@/lib/store";
 import {
   absoluteUrl,
   breadcrumbJsonLd,
@@ -94,7 +95,9 @@ export default async function ArticlePage({ params }: PageProps<"/news/[slug]">)
     .split("\n\n")
     .map((p) => p.trim())
     .filter((p) => p.length > 0 && !(source && p === PLACEHOLDER));
-  const related = (await getClipsByCategory(clip.category))
+  // Straight from the store, not the cached category helper: that goes through
+  // load()'s hourly unstable_cache and would drag this route back to hourly ISR.
+  const related = (await getStoredClips(12, clip.category))
     .filter((c) => c.slug !== clip.slug && !shouldNoindex(c))
     .slice(0, 4);
 

@@ -241,11 +241,13 @@ const LIST_COLUMNS = `
   embed_url, permalink, views, rewritten_title,
   (coalesce(article_th, '') <> '' or coalesce(script_th, '') <> '') as has_script`;
 
-export async function getStoredClips(limit = DEFAULT_LIMIT): Promise<Clip[]> {
+export async function getStoredClips(limit = DEFAULT_LIMIT, category?: CategorySlug): Promise<Clip[]> {
   return run("getStoredClips", [], async (db) => {
     const { results } = await db
-      .prepare(`select ${LIST_COLUMNS} from clips_full order by published_at desc limit ?`)
-      .bind(Math.max(0, limit))
+      .prepare(
+        `select ${LIST_COLUMNS} from clips_full${category ? " where category = ?" : ""} order by published_at desc limit ?`,
+      )
+      .bind(...(category ? [category] : []), Math.max(0, limit))
       .all();
     return results.map(toClip);
   });

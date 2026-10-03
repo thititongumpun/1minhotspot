@@ -35,6 +35,15 @@
       // real D1 instead of an empty local miniflare file.
       "remote": true,
     },
+    {
+      // OpenNext D1 tag cache (see open-next.config.ts): the `revalidations`
+      // table in the same database, created by `opennextjs-cloudflare
+      // populateCache` on deploy/preview. Not remote: local preview keeps its
+      // revalidation state in miniflare instead of writing to production.
+      "binding": "NEXT_TAG_CACHE_D1",
+      "database_name": "1minhotspot",
+      "database_id": "c79accb9-c584-4e24-8eea-a11fc2bb8111",
+    },
   ],
   "r2_buckets": [
     {

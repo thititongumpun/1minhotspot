@@ -2,6 +2,7 @@ import { defineCloudflareConfig } from "@opennextjs/cloudflare";
 import r2IncrementalCache from "@opennextjs/cloudflare/overrides/incremental-cache/r2-incremental-cache";
 import { withRegionalCache } from "@opennextjs/cloudflare/overrides/incremental-cache/regional-cache";
 import doQueue from "@opennextjs/cloudflare/overrides/queue/do-queue";
+import d1NextTagCache from "@opennextjs/cloudflare/overrides/tag-cache/d1-next-tag-cache";
 
 // ISR page cache backed by R2, via the "NEXT_INC_CACHE_R2_BUCKET" binding in
 // wrangler.jsonc. Separate from lib/r2.ts (thumbnail storage over the R2 S3
@@ -16,10 +17,7 @@ import doQueue from "@opennextjs/cloudflare/overrides/queue/do-queue";
 // Staleness is bounded to one request per colo and self-heals: `set` writes R2
 // AND the local cache, `delete` clears both, and `shouldLazilyUpdateOnCacheHit`
 // (the Next 16 default here, since bypassTagCacheOnCacheHit stays false)
-// re-reads R2 in waitUntil on every hit. So a colo holding a pre-publish entry
-// serves it once, then refreshes — revalidateClipLists() still surfaces a new
-// story in seconds, which a CDN cache rule with s-maxage would have delayed by
-// up to the full ~54 minute TTL.
+// re-reads R2 in waitUntil on every hit.
 //
 // Cache purge is deliberately NOT wired up: the adapter's purgeCache override
 // invalidates by cache tag, and both tag purge and the Cache-Tag header are
@@ -29,4 +27,11 @@ export default defineCloudflareConfig({
 	// Time-based ISR (revalidate = N) is inert on Workers without a queue; the
 	// Durable Object queue dedupes revalidation and needs NEXT_CACHE_DO_QUEUE.
 	queue: doQueue,
+	// On-demand revalidation (revalidatePath in /api/ingest, revalidateClipLists)
+	// was a no-op until this: the default tag cache is a dummy. The D1 "next
+	// mode" tag cache stores tag timestamps in the `revalidations` table of the
+	// NEXT_TAG_CACHE_D1 binding; populateCache creates the table on deploy and
+	// preview. Cost: with the regional cache above, every page hit also runs one
+	// D1 read to check whether its tags were revalidated since it was cached.
+	tagCache: d1NextTagCache,
 });

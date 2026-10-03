@@ -23,7 +23,7 @@ const MAX_EXCERPT = 600;
 /** At most this many source paragraphs join the publisher's own description. */
 const MAX_PARAGRAPHS = 2;
 const FETCH_TIMEOUT_MS = 8000;
-const REVALIDATE = 3600;
+const REVALIDATE = 86400; // daily self-heal floor; /api/ingest revalidatePath refreshes on demand
 
 /** The Page prefixes its own source-link comment with this. The other Page
  *  comment on each video is a Shopee affiliate link — same author, different

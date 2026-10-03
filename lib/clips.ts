@@ -200,18 +200,16 @@ export const getClip = cache(async (slug: string): Promise<Clip | null> => {
   } catch {
     // Malformed escape sequence — match on the raw string and let it 404.
   }
-  // load() is capped (getStoredClips has a limit), so a deep-archive slug can
-  // miss it. Hitting the store by slug is what guarantees an old URL still 200s
-  // — the whole point of persisting clips.
-  // load() rows are the trimmed list projection (lib/store.ts) — no body,
-  // summary or tags. The article page needs all three, so the store row is
-  // authoritative here; load() only contributes the live signed CDN urls.
-  const listed = (await load()).find((c) => c.slug === wanted);
+  // The store row is authoritative: it is the full projection (body, summary,
+  // tags — load() rows are the trimmed list projection) and its thumbnail is
+  // already the archived R2 URL, so there is nothing to overlay from the live
+  // feed. Reading it first also keeps load()'s hourly unstable_cache out of
+  // this route: Next sets a route's ISR period to the lowest revalidate it
+  // touches, so going through load() regenerated every article page hourly
+  // (three R2 PutObjects each) — that was the R2 Class A bill. load() is only
+  // the fallback for a slug the store has never seen (no DB / sample-data dev).
   const stored = await getStoredClipBySlug(wanted);
-  const clip =
-    stored && listed
-      ? { ...stored, thumbnail: listed.thumbnail, embedUrl: listed.embedUrl }
-      : (stored ?? listed);
+  const clip = stored ?? (await load()).find((c) => c.slug === wanted) ?? null;
   if (!clip || clip.source !== "facebook") return clip ?? null;
   // Lazy on purpose: only the article page needs a body, and resolving one
   // costs a Graph call plus a hit on a publisher we do not own. Doing this in
