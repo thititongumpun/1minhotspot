@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { preload } from "react-dom";
 import { heroThumbUrl } from "@/lib/thumb-blob";
-import { getClip, getClips } from "@/lib/clips";
+import { getClip } from "@/lib/clips";
 import { getStoredClips } from "@/lib/store";
 import {
   absoluteUrl,
@@ -26,17 +26,15 @@ import { SectionHead } from "@/components/section-head";
 import { ShareButton } from "@/components/share-button";
 
 /**
- * Prerender only the recent window. The store accumulates clips forever, so
- * prerendering all of them would make build time grow without bound. Older
- * articles still resolve: `dynamicParams` defaults to true, so they render on
- * demand and are cached from then on. Never add a notFound() for a slug that
- * misses this list — serving old URLs is the entire point of the store.
+ * Nothing is prerendered at build: every article renders on first request and
+ * is then cached for a day (dynamicParams defaults to true). Prerendering the
+ * newest 200 pulled ~400 queries through wrangler's remote D1 proxy on the CI
+ * build host, and one dropped proxy connection failed the whole build. On
+ * Workers the D1 binding is native. Never add a notFound() for a slug that is
+ * not in a list — serving old URLs is the entire point of the store.
  */
-const PRERENDER_LIMIT = 200;
-
-export async function generateStaticParams() {
-  const clips = await getClips();
-  return clips.slice(0, PRERENDER_LIMIT).map(({ slug }) => ({ slug }));
+export function generateStaticParams() {
+  return [];
 }
 
 export async function generateMetadata({
