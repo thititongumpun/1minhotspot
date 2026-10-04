@@ -10,6 +10,13 @@ export const alt = "สรุปข่าวร้อนใน 1 นาที �
 const fontBoldPromise = loadThaiFont("Anuphan", 700);
 const fontMediumPromise = loadThaiFont("Anuphan", 600);
 
+// Without this the route is rendered on every fetch: each Facebook, Google or
+// LINE preview paid a full satori/resvg PNG render. An empty list keeps it
+// ISR-cached (generated on first request per slug, same period as the page).
+export function generateStaticParams() {
+  return [];
+}
+
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const clip = await getClip(slug);
