@@ -80,4 +80,8 @@ const nextConfig: NextConfig = {
 
 export default nextConfig;
 
-import('@opennextjs/cloudflare').then(m => m.initOpenNextCloudflareForDev());
+// wrangler.jsonc marks DB `remote: true`, so plain `next dev` reads PROD D1.
+// OPENNEXT_LOCAL_BINDINGS=1 flips to local miniflare state in .wrangler/ instead.
+import('@opennextjs/cloudflare').then(m =>
+  m.initOpenNextCloudflareForDev(process.env.OPENNEXT_LOCAL_BINDINGS === "1" ? { remoteBindings: false } : undefined),
+);

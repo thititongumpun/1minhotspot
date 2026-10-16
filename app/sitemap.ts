@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getClips } from "@/lib/clips";
-import { getAllClipRefs, getCategoryLastMod, type ClipRef } from "@/lib/store";
+import { getAllClipRefs, getCategoryLastMod, getPromotionSlugs, type ClipRef } from "@/lib/store";
 import { absoluteUrl, shouldNoindex } from "@/lib/seo";
 import { CATEGORIES } from "@/lib/types";
 import type { Clip } from "@/lib/types";
@@ -18,6 +18,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // polls for the 48h window, and any clip lands here on the next revalidate.
   const stored = await getAllClipRefs();
   const catLastMod = await getCategoryLastMod();
+  const promos = await getPromotionSlugs();
   // One live read serves both fallbacks; getClips() rides load()'s Data Cache
   // so a second call inside the same render is free.
   const live: Clip[] = stored.length === 0 || catLastMod.size === 0 ? await getClips() : [];
@@ -56,6 +57,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: absoluteUrl(path),
       changeFrequency: "yearly" as const,
       priority: 0.3,
+    })),
+    // Sponsored promo pages — every one that has started, ended ones included
+    // (they stay up as archived pages). starts_at is the one real date a row has.
+    ...promos.map((p) => ({
+      url: absoluteUrl(`/promo/${p.slug}`),
+      lastModified: new Date(p.startsAt),
+      changeFrequency: "weekly" as const,
+      priority: 0.5,
     })),
     // Category indexes — the real max(updated_at) of that category's clips.
     // A category with no clips gets NO lastmod at all: omitting it is honest,

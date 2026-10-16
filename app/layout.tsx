@@ -2,8 +2,10 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { absoluteUrl, siteUrl, SITE_DESCRIPTION, SITE_NAME } from "@/lib/seo";
 import { fontVars } from "./fonts";
+import { PromoBanner } from "@/components/promo-banner";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { getActivePromotion } from "@/lib/store";
 import "./globals.css";
 
 // Cloudflare Web Analytics token, created per-site in the Cloudflare dashboard
@@ -60,7 +62,11 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Plain D1 read, no data cache and no request API: every page keeps its own
+  // ISR period (articles daily, lists hourly, /about static). A new promotion is
+  // pushed out by /api/promo-revalidate, which revalidates this layout.
+  const promo = await getActivePromotion();
   return (
     <html lang="th" className={`h-full antialiased ${fontVars}`}>
       <body className="min-h-full flex flex-col">
@@ -81,6 +87,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           ข้ามไปยังเนื้อหา
         </a>
         <SiteHeader />
+        {promo && <PromoBanner promo={promo} />}
         <main id="content" className="flex-1">
           {children}
         </main>

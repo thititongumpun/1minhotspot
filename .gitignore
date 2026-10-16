@@ -60,3 +60,8 @@ db/export/
 
 # backfill batch job state (scripts/backfill-articles.ts)
 .backfill-*
+
+# promo sources, taste-skill scratch, local dev renders of promo images
+promos/
+.taste-skill/
+public/promo-dev/

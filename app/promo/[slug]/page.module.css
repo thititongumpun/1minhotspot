@@ -1,0 +1,374 @@
+/* /promo/<slug> — "specimen catalogue" direction (taste-skill seed 175930115).
+   Page-scoped tokens: the two pinks are the subject's own enamel colour, so they
+   do not flip with the site's dark theme — text on a pink field is pinned to a
+   dark ink instead. Contrast (WCAG, approximated from oklch L):
+   pink-ink on misty 11:1 · rose on misty 6.3:1 · paper on rose 7.9:1. */
+.page {
+  --misty: oklch(0.9 0.05 5);
+  --rose: oklch(0.42 0.14 5);
+  --pink-ink: oklch(0.22 0.02 264);
+  --paper: oklch(0.975 0.008 85);
+  /* text gutter that lines up with .container-hot's left edge */
+  --gutter: max(20px, calc((100vw - 1240px) / 2 + 32px));
+}
+@media (max-width: 1023px) {
+  .page {
+    --gutter: 20px;
+  }
+}
+
+/* Hero: the viewport split by tone alone — page ground left, misty field right. */
+.hero {
+  display: grid;
+}
+@media (min-width: 1024px) {
+  .hero {
+    grid-template-columns: 1fr 1fr;
+    min-height: min(80svh, 820px);
+  }
+}
+.heroText {
+  display: flex;
+  flex-direction: column;
+  padding: 28px 20px 28px var(--gutter);
+}
+@media (min-width: 1024px) {
+  .heroText {
+    padding: 64px 48px 56px var(--gutter);
+  }
+}
+.heroField {
+  background: var(--misty);
+  color: var(--pink-ink);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+@media (min-width: 1024px) {
+  .heroField {
+    padding: 48px;
+  }
+}
+.heroField img {
+  width: min(100%, 72svh);
+  height: auto;
+  display: block;
+}
+
+/* Five type steps on the page: display (.title), heading (.heading),
+   lead (.lead — hero statement, intro statement, section titles), body
+   (text-lg) and small (text-base). Map every blueprint size onto these. */
+.title {
+  font-size: clamp(2rem, 6vw, 3.75rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.heading {
+  font-size: clamp(1.5rem, 3.4vw, 3.125rem);
+  line-height: 1.1;
+}
+.statement {
+  font-size: clamp(1.375rem, 2.2vw, 2rem);
+  line-height: 1.35;
+}
+
+/* Buttons: one shape, square corners, 48px, flat fill. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 22px;
+  background: var(--rose);
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.125rem;
+  border-radius: 2px;
+  transition: transform 120ms ease-out, background-color 180ms ease;
+}
+.button:active {
+  transform: scale(0.97);
+}
+.buttonInverse {
+  background: var(--paper);
+  color: var(--rose);
+}
+@media (hover: hover) and (pointer: fine) {
+  .button:hover {
+    background: oklch(0.36 0.14 5);
+  }
+  .buttonInverse:hover {
+    background: var(--misty);
+  }
+}
+
+/* Intro statement with inline preview frames in the line. */
+.lead {
+  font-size: clamp(1.375rem, 2.2vw, 2rem);
+  line-height: 1.4;
+}
+.intro {
+  max-width: 66%;
+}
+@media (max-width: 1023px) {
+  .intro {
+    max-width: none;
+  }
+}
+
+/* The catalogue: two columns, a flat tile where the bullet would be. */
+.catalogue {
+  display: grid;
+  gap: 36px 64px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+@media (min-width: 768px) {
+  .catalogue {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.item {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+.tile {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 2px;
+  background: var(--misty);
+}
+@media (min-width: 768px) {
+  .tile {
+    width: 64px;
+    height: 64px;
+  }
+}
+.item:nth-child(3n + 2) .tile {
+  background: var(--rose);
+}
+.item:nth-child(3n) .tile {
+  background: var(--color-surface);
+}
+
+/* Gallery: every picture, uncropped, in a masonry of CSS columns (2 → 3 → 4). */
+.strip {
+  columns: 2;
+  column-gap: 12px;
+  padding-inline: var(--gutter);
+  padding-block: 24px;
+}
+@media (min-width: 768px) {
+  .strip {
+    columns: 3;
+  }
+}
+@media (min-width: 1024px) {
+  .strip {
+    columns: 4;
+    column-gap: 16px;
+  }
+}
+.strip li {
+  break-inside: avoid;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.strip a {
+  display: block;
+}
+.strip img {
+  width: 100%;
+  height: auto;
+  display: block;
+  transition: transform 250ms ease-out;
+}
+@media (hover: hover) and (pointer: fine) {
+  .strip a:hover img {
+    transform: scale(1.03);
+  }
+}
+
+/* On-site viewer (native <dialog>). The dialog IS the visible viewport: fixed +
+   inset:0 is the one box every browser (iOS Safari toolbars included) sizes to
+   what is actually on screen, so nothing below uses vh/svh/dvh or fit-content —
+   the UA's fit-content/margin:auto centring and Tailwind's margin reset are
+   both overridden. */
+.viewer {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) calc(12px + env(safe-area-inset-right, 0px))
+    calc(12px + env(safe-area-inset-bottom, 0px)) calc(12px + env(safe-area-inset-left, 0px));
+  border: 0;
+  background: transparent;
+  overflow: hidden;
+}
+.viewer::backdrop {
+  background: rgb(0 0 0 / 0.88);
+}
+/* Frame + controls centred as one group. The frame is a 2:3 box (the tallest
+   picture in the set), shrunk only when the screen is shorter, so it is the
+   same size for every picture; the picture sits on its bottom edge, so the
+   controls are right under it and never move between pictures. The <img> is
+   inside a div, never the flex item itself: WebKit will not shrink a replaced
+   flex/grid item below its aspect-ratio height. The picture is absolutely
+   placed on the frame's bottom edge and sized by max-width/max-height, so its
+   box is exactly the painted picture — a tap on the dark frame around it
+   lands on the frame and closes the viewer. */
+.viewer figure {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.viewerFrame {
+  position: relative;
+  width: min(100%, 1280px);
+  aspect-ratio: 2 / 3;
+  flex: 0 1 auto;
+  min-height: 0;
+}
+.viewerImg {
+  position: absolute;
+  inset: auto 0 0 0;
+  margin: 0 auto;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+}
+.viewerBtn {
+  min-width: 48px;
+  min-height: 48px;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: #fff;
+  background: rgb(255 255 255 / 0.16);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.viewerBtn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* The close: the object returns on the deep rose field, cropped bottom-left. */
+.close {
+  background: var(--rose);
+  color: var(--paper);
+  overflow: hidden;
+  display: grid;
+  gap: 32px;
+  padding-top: 56px;
+}
+@media (min-width: 1024px) {
+  .close {
+    grid-template-columns: 2fr 1fr;
+    min-height: min(90svh, 820px);
+    padding-top: 0;
+    align-items: center;
+  }
+}
+.closeText {
+  padding: 0 20px 0 var(--gutter);
+}
+@media (min-width: 1024px) {
+  .closeText {
+    order: 2;
+    padding: 80px var(--gutter) 80px 32px;
+  }
+}
+.closeObject {
+  align-self: end;
+  justify-self: start;
+  width: 130%;
+  max-width: none;
+  height: auto;
+  margin-inline-start: -15%;
+  margin-block-end: -8%;
+  display: block;
+}
+@media (min-width: 1024px) {
+  .closeObject {
+    order: 1;
+    width: 110%;
+    margin-inline-start: -12%;
+    margin-block-end: -16%;
+  }
+}
+
+/* Motion. Transform/opacity/clip-path only; reduced motion = the finished state.
+   Entrances are scroll-driven (view timelines), so no script is needed; a
+   browser without them ignores the invalid `auto` duration and shows content. */
+@media (prefers-reduced-motion: no-preference) {
+  .shutter {
+    animation: shutter 1100ms cubic-bezier(0.65, 0, 0.35, 1) both;
+    overflow: hidden;
+  }
+  .shutter img {
+    animation: settle 1500ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .rise {
+    animation: rise auto linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 40%;
+  }
+  .rise:nth-child(2) {
+    animation-range: entry 8% entry 48%;
+  }
+  .rise:nth-child(3) {
+    animation-range: entry 16% entry 56%;
+  }
+  .rise:nth-child(n + 4) {
+    animation-range: entry 24% entry 64%;
+  }
+  .drift {
+    animation: drift 18s ease-in-out infinite alternate;
+  }
+}
+@keyframes shutter {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0);
+  }
+}
+@keyframes settle {
+  from {
+    transform: scale(1.12);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes drift {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.04);
+  }
+}

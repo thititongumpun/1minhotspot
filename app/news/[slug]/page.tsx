@@ -95,9 +95,8 @@ export default async function ArticlePage({ params }: PageProps<"/news/[slug]">)
     .filter((p) => p.length > 0 && !(source && p === PLACEHOLDER));
   // Straight from the store, not the cached category helper: that goes through
   // load()'s hourly unstable_cache and would drag this route back to hourly ISR.
-  const related = (await getStoredClips(12, clip.category))
-    .filter((c) => c.slug !== clip.slug && !shouldNoindex(c))
-    .slice(0, 4);
+  const relatedRaw = await getStoredClips(12, clip.category);
+  const related = relatedRaw.filter((c) => c.slug !== clip.slug && !shouldNoindex(c)).slice(0, 4);
 
   const label = categoryLabel(clip.category);
   // A malformed permalink must not 500 the article; fall back to the provider name.
