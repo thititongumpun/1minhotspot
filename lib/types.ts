@@ -54,6 +54,26 @@ export type Clip = {
   comments?: number;
 };
 
+/** One promo image as stored in `promotions.images`. `url` is the 1280 size. */
+export type PromoImage = { url: string; w: number; h: number; alt: string };
+export type PromoLink = { label: string; url: string };
+
+/** A sponsored placement: home banner, article rail card and /promo/<slug>. */
+export type Promotion = {
+  slug: string;
+  brand: string;
+  title: string;
+  summary: string;
+  body: string; // plain text, paragraphs joined by "\n\n"
+  images: PromoImage[]; // [0] is the banner image
+  links: PromoLink[]; // CTA targets, reached via /go/<slug>/<n>
+  startsAt: string; // ISO 8601
+  endsAt: string; // ISO 8601
+};
+
+/** The 640px sibling of a 1280px promo image key (see scripts/promo-add.ts). */
+export const promoSmallUrl = (url: string): string => url.replace(/-1280\.webp$/, "-640.webp");
+
 /** Display order for category strips and nav.
  *  `intro` is the 2-3 sentence Thai lede /category/<slug> renders above the grid
  *  — before it, a category page had zero words outside the cards, which is what

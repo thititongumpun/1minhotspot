@@ -1,6 +1,6 @@
 import { getDb, type D1 } from "./db";
 import type { Engagement } from "./providers/facebook";
-import type { CategorySlug, Clip } from "./types";
+import type { CategorySlug, Clip, Promotion } from "./types";
 
 /** What n8n POSTs after it publishes a reel. Keyed by the Facebook video id. */
 export type ScriptInput = {
@@ -18,15 +18,17 @@ const DEFAULT_LIMIT = 500;
 const iso = (v: unknown): string =>
   v instanceof Date ? v.toISOString() : new Date(String(v)).toISOString();
 
-/** `tags` is a JSON array in a text column; anything else (null, bad import) → []. */
-const tagsOf = (v: unknown): string[] => {
+/** A JSON array in a text column; anything else (null, bad JSON) → []. */
+const jsonArray = <T,>(v: unknown): T[] => {
   try {
     const parsed = typeof v === "string" ? JSON.parse(v) : v;
-    return Array.isArray(parsed) ? parsed.map(String) : [];
+    return Array.isArray(parsed) ? (parsed as T[]) : [];
   } catch {
     return [];
   }
 };
+
+const tagsOf = (v: unknown): string[] => jsonArray<unknown>(v).map(String);
 
 /** Bangkok Y/M via Intl, same pattern as components/format.ts `formatDate` — the
  *  host may run in UTC (or anywhere), so the month boundary can't be derived
@@ -486,6 +488,66 @@ export async function getStoredThumbs(
         },
       ]),
     );
+  });
+}
+
+/** promotions row → Promotion. Exported so the shaping is testable without a DB. */
+export const toPromotion = (r: Record<string, unknown>): Promotion => ({
+  slug: String(r.slug),
+  brand: String(r.brand),
+  title: String(r.title),
+  summary: String(r.summary),
+  body: String(r.body ?? ""),
+  images: jsonArray<Promotion["images"][number]>(r.images),
+  links: jsonArray<Promotion["links"][number]>(r.links),
+  startsAt: iso(r.starts_at),
+  endsAt: iso(r.ends_at),
+});
+
+/**
+ * The promotion to show now: the latest-starting one that has not ended. No
+ * start filter — components/promo-gate.tsx hides a not-yet-started one on the
+ * client, so a page rendered before `starts_at` needs no regeneration.
+ *
+ * Plain D1 read through run(), deliberately NOT wrapped in a Next data cache:
+ * the article page reaches this, and any cache period under its 86400 would
+ * drag article regeneration back to that period (see lib/providers/source-article.ts).
+ */
+export async function getActivePromotion(): Promise<Promotion | null> {
+  return run("getActivePromotion", null, async (db) => {
+    // Started rows first: without that a row scheduled for next month would
+    // outrank the live one and the gate would hide it until its start.
+    const iso = new Date().toISOString();
+    const row = await db
+      .prepare(
+        `select * from promotions where ends_at > ? order by (starts_at <= ?) desc, starts_at desc limit 1`,
+      )
+      .bind(iso, iso)
+      .first();
+    return row ? toPromotion(row) : null;
+  });
+}
+
+/** One promotion by slug, expired or not — the page and /go decide on `endsAt`. */
+export async function getPromotion(slug: string): Promise<Promotion | null> {
+  return run(`getPromotion(${slug})`, null, async (db) => {
+    const row = await db.prepare(`select * from promotions where slug = ? limit 1`).bind(slug).first();
+    return row ? toPromotion(row) : null;
+  });
+}
+
+/**
+ * Every promotion that has started, newest first, for the sitemap — ended ones
+ * included (they stay live as archived pages); not-yet-started ones excluded
+ * so a promotion loaded ahead of launch does not leak through <loc>.
+ */
+export async function getPromotionSlugs(): Promise<{ slug: string; startsAt: string }[]> {
+  return run("getPromotionSlugs", [], async (db) => {
+    const { results } = await db
+      .prepare(`select slug, starts_at from promotions where starts_at <= ? order by starts_at desc`)
+      .bind(new Date().toISOString())
+      .all<{ slug: string; starts_at: string }>();
+    return results.map((r) => ({ slug: r.slug, startsAt: iso(r.starts_at) }));
   });
 }
 

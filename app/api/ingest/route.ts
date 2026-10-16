@@ -1,5 +1,5 @@
-import { timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
+import { authorized, SECRET_HEADER } from "@/lib/auth";
 import { ensureArchivedThumbnail, revalidateClipLists } from "@/lib/clips";
 import { rescrapeUrl } from "@/lib/providers/facebook";
 import { absoluteUrl } from "@/lib/seo";
@@ -13,26 +13,10 @@ import { getStoredRefById, upsertScript, type ScriptInput } from "@/lib/store";
 // be dead config today and a lie tomorrow. This handler reads request headers
 // and body, which are request-time APIs, so prerendering cannot reach it.
 
-const SECRET_HEADER = "x-ingest-secret";
 const MAX_BODY_BYTES = 64 * 1024;
 
 const json = (body: unknown, status: number) => Response.json(body, { status });
 const fail = (status: number, error: string) => json({ ok: false, error }, status);
-
-/**
- * Constant-time secret check. Fails closed: with INGEST_SECRET unset every
- * request is rejected — there is no default and no unauthenticated write path.
- * The length guard is required because timingSafeEqual throws on unequal
- * lengths; it leaks only the secret's length, which is not the secret.
- */
-function authorized(provided: string | null): boolean {
-  const expected = process.env.INGEST_SECRET;
-  if (!expected || !provided) return false;
-  const a = Buffer.from(provided, "utf8");
-  const b = Buffer.from(expected, "utf8");
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
 
 /** Non-empty string or null — the only string shape this endpoint accepts. */
 const str = (v: unknown): string | null => (typeof v === "string" && v.trim() !== "" ? v : null);

@@ -10,10 +10,10 @@ export function formatTimecode(sec: number): string {
  * Thai Buddhist-era date (`21 สิงหาคม 2569`).
  * Verified against Intl.DateTimeFormat directly — see components/format.test.ts.
  */
-export function formatDate(iso: string): string {
+export function formatDate(iso: string, month: "long" | "short" = "long"): string {
   const fmt = new Intl.DateTimeFormat("th-TH-u-ca-buddhist", {
     day: "numeric",
-    month: "long",
+    month, // "short" → `6 พ.ย. 2569`, for the promo strip's one phone-width line
     year: "numeric",
     // Without this, the date rolls over at the HOST's midnight, not
     // Bangkok's — a UTC dev box or a US-region server would show the wrong
